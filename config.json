@@ -1,0 +1,133 @@
+{
+  "brand": {
+    "name": "Serena & Lily",
+    "logoText": "Serena & Lily",
+    "tagline": "A Fresh Approach to Home",
+    "website": "https://www.serenaandlily.com",
+    "announcementText": "Cylindo 3D Product Visualization Demo — Serena & Lily",
+    "navLinks": ["Living", "Bedroom", "Dining", "Outdoor", "Sale"],
+    "navHighlight": "Living",
+    "footerCopyright": "Serena & Lily — Cylindo Demo",
+    "footerColumns": [
+      { "title": "Customer Care", "links": ["Contact Us", "Shipping & Returns", "FAQ", "Design Services"] },
+      { "title": "About", "links": ["Our Story", "Design Philosophy", "Sustainability", "Careers"] },
+      { "title": "Explore", "links": ["New Arrivals", "Best Sellers", "Collections", "Inspiration"] }
+    ],
+    "theme": {
+      "fontHeading": "'Libre Baskerville', 'Georgia', serif",
+      "fontBody": "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+      "colorBg": "#ffffff",
+      "colorBgAlt": "#f7f5f0",
+      "colorText": "#2c3e50",
+      "colorTextSecondary": "#7a8a8e",
+      "colorAccent": "#2c5f7c",
+      "colorAccentHover": "#1e4a61",
+      "colorBorder": "#ddd8ce",
+      "colorSuccess": "#5a7c65"
+    }
+  },
+  "cylindo": {
+    "customerId": "4404",
+    "remoteConfig": "a7ap4vak"
+  },
+  "products": [
+    {
+      "id": "haven-sofa",
+      "name": "Haven Comfort Arm Sofa",
+      "code": "HAVEN COMFORT ARM SOFA",
+      "price": "$4,298.00",
+      "priceNote": "Starting at $358/mo with financing",
+      "rating": 4.8,
+      "reviewCount": 86,
+      "description": "Sink-in comfort meets timeless coastal design. The Haven Comfort Arm Sofa is built with a kiln-dried hardwood frame and wrapped in your choice of premium performance fabrics — designed to look beautiful for years to come.",
+      "badges": [
+        { "text": "Best Seller", "type": "bestseller" },
+        { "text": "Made to Order", "type": "custom" }
+      ],
+      "breadcrumb": ["Home", "Living", "Sofas"],
+      "features": [
+        {
+          "code": "FABRIC",
+          "label": "Fabric",
+          "options": [
+            { "name": "Atomic Shell", "value": "ATOMIC - SHELL" },
+            { "name": "1293744", "value": "1293744" },
+            { "name": "1349662", "value": "1349662" },
+            { "name": "Basketweave Coastal Blue", "value": "PERENNIALS PERFORMANCE BASKETWEAVE COASTAL BLUE" },
+            { "name": "Basketweave Sand", "value": "PERENNIALS PERFORMANCE BASKETWEAVE SAND" },
+            { "name": "Basketweave Seaglass", "value": "PERENNIALS PERFORMANCE BASKETWEAVE SEAGLASS" },
+            { "name": "Rugged Stripe Anthracite", "value": "RUGGED STRIPE ANTHRACITE" }
+          ]
+        }
+      ],
+      "highlights": [
+        { "title": "Sink-In Comfort", "description": "Multi-layer cushion system with high-resiliency foam and fiber wrap for the perfect sit." },
+        { "title": "Performance Fabrics", "description": "Stain-resistant, fade-resistant fabrics that stand up to everyday life." },
+        { "title": "Hardwood Frame", "description": "Kiln-dried hardwood frame built for lasting durability and structural integrity." },
+        { "title": "Made to Order", "description": "Handcrafted in your choice of fabric. Each piece is made just for you." },
+        { "title": "White Glove Delivery", "description": "Delivered to your room of choice, fully assembled and ready to enjoy." }
+      ],
+      "specs": [
+        { "group": "Dimensions", "items": [["Overall Width", "84\""], ["Overall Depth", "40\""], ["Overall Height", "34\""], ["Seat Depth", "22\""], ["Seat Height", "18\""], ["Arm Height", "26\""]] },
+        { "group": "Details", "items": [["Frame", "Kiln-dried hardwood"], ["Cushions", "High-resiliency foam"], ["Legs", "Solid oak"], ["Assembly", "Fully assembled"], ["Care", "Spot clean"]] }
+      ],
+      "faqs": [
+        { "q": "What is the delivery timeline for made-to-order pieces?", "a": "Made-to-order upholstery typically ships in 6-8 weeks." },
+        { "q": "Can I order fabric swatches?", "a": "Yes! We offer complimentary fabric swatches so you can see and feel the material before ordering." },
+        { "q": "What makes performance fabric different?", "a": "Our performance fabrics are engineered to resist stains, fading, and wear." },
+        { "q": "Is white glove delivery included?", "a": "White glove delivery is available for all upholstered furniture." },
+        { "q": "What is your return policy on custom upholstery?", "a": "Made-to-order upholstery is final sale. We encourage ordering swatches first." }
+      ],
+      "leadTime": "6-8 week lead time for made-to-order"
+    },
+    {
+      "id": "norfolk-sofa",
+      "name": "Norfolk Wide Arm Pleated Sofa",
+      "code": "NORFOLK WIDE ARM PLEATED SOFA",
+      "price": "$5,198.00",
+      "priceNote": "Starting at $433/mo with financing",
+      "rating": 4.9,
+      "reviewCount": 42,
+      "description": "Elegant pleated detailing meets generous proportions. The Norfolk Wide Arm Pleated Sofa makes a refined statement with its distinctive pleated arms and deep, comfortable seating — a stunning centerpiece for any living room.",
+      "badges": [
+        { "text": "New Arrival", "type": "new" },
+        { "text": "Made to Order", "type": "custom" }
+      ],
+      "breadcrumb": ["Home", "Living", "Sofas"],
+      "features": [
+        {
+          "code": "FABRIC",
+          "label": "Fabric",
+          "options": [
+            { "name": "Atomic Shell", "value": "ATOMIC - SHELL" },
+            { "name": "1293744", "value": "1293744" },
+            { "name": "1349662", "value": "1349662" },
+            { "name": "Basketweave Coastal Blue", "value": "PERENNIALS PERFORMANCE BASKETWEAVE COASTAL BLUE" },
+            { "name": "Basketweave Sand", "value": "PERENNIALS PERFORMANCE BASKETWEAVE SAND" },
+            { "name": "Basketweave Seaglass", "value": "PERENNIALS PERFORMANCE BASKETWEAVE SEAGLASS" },
+            { "name": "Rugged Stripe Anthracite", "value": "RUGGED STRIPE ANTHRACITE" }
+          ]
+        }
+      ],
+      "highlights": [
+        { "title": "Pleated Detail", "description": "Signature pleated arm design adds visual interest and artisanal character." },
+        { "title": "Wide Arm Design", "description": "Generously proportioned arms provide a place to rest a book or a drink." },
+        { "title": "Deep Seating", "description": "Extra-deep cushions invite you to settle in for the long haul." },
+        { "title": "Premium Construction", "description": "Eight-way hand-tied springs and kiln-dried hardwood for heirloom quality." },
+        { "title": "Made to Order", "description": "Handcrafted in your choice of fabric. Each piece is made just for you." }
+      ],
+      "specs": [
+        { "group": "Dimensions", "items": [["Overall Width", "96\""], ["Overall Depth", "44\""], ["Overall Height", "33\""], ["Seat Depth", "24\""], ["Seat Height", "18\""], ["Arm Height", "25\""]] },
+        { "group": "Details", "items": [["Frame", "Kiln-dried hardwood"], ["Springs", "Eight-way hand-tied"], ["Cushions", "Down-blend wrap"], ["Legs", "Turned wood"], ["Care", "Spot clean"]] }
+      ],
+      "faqs": [
+        { "q": "What is the delivery timeline for made-to-order pieces?", "a": "Made-to-order upholstery typically ships in 6-8 weeks." },
+        { "q": "What makes the Norfolk different from other sofas?", "a": "Distinctive pleated arm detailing and extra-wide arms with eight-way hand-tied springs." },
+        { "q": "Can I order fabric swatches?", "a": "Yes! We offer complimentary fabric swatches. Order up to 10 at no cost." },
+        { "q": "Is the sofa comfortable for napping?", "a": "Absolutely! Extra-deep seat cushions and down-blend fill make it ideal for lounging." },
+        { "q": "What is your return policy on custom upholstery?", "a": "Made-to-order upholstery is final sale. We encourage ordering swatches first." }
+      ],
+      "leadTime": "6-8 week lead time for made-to-order"
+    }
+  ]
+}
