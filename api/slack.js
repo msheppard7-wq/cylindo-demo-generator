@@ -377,19 +377,27 @@ module.exports = async function handler(req, res) {
     if (!triggerId) {
       return res.status(200).json({
         response_type: 'ephemeral',
-        text: ':warning: Could not open the form. Please try again.',
+        text: ':warning: No trigger_id received. Please try again.',
       });
     }
 
-    // Respond immediately (Slack needs < 3s)
-    res.status(200).send('');
-
-    // Open the modal
-    const result = await openModal(triggerId);
-    if (result.data && !result.data.ok) {
-      console.error('Modal open error:', JSON.stringify(result.data));
+    // Open the modal FIRST, before responding (Vercel may kill the function after res.send)
+    try {
+      const result = await openModal(triggerId);
+      if (result.data && !result.data.ok) {
+        return res.status(200).json({
+          response_type: 'ephemeral',
+          text: `:warning: Could not open form: ${result.data.error || 'unknown error'}\n\nDebug: token starts with ${SLACK_BOT_TOKEN ? SLACK_BOT_TOKEN.substring(0, 8) : 'NOT SET'}`,
+        });
+      }
+      // Modal opened successfully — send empty 200 to acknowledge
+      return res.status(200).send('');
+    } catch (err) {
+      return res.status(200).json({
+        response_type: 'ephemeral',
+        text: `:x: Error opening form: ${err.message}`,
+      });
     }
-    return;
   }
 
   // ---- Handle: Modal submission (interactive payload) ----
@@ -521,9 +529,12 @@ module.exports = async function handler(req, res) {
 
   // No text = open modal (default behavior)
   if (body.trigger_id) {
-    res.status(200).send('');
-    await openModal(body.trigger_id);
-    return;
+    try {
+      await openModal(body.trigger_id);
+      return res.status(200).send('');
+    } catch (err) {
+      return res.status(200).json({ response_type: 'ephemeral', text: `:x: Error: ${err.message}` });
+    }
   }
 
   res.status(200).json({ response_type: 'ephemeral', text: 'Type `/cylindo-demo` to open the demo generator form.' });
