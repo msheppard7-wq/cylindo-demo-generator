@@ -19,6 +19,7 @@ const VERCEL_API = 'https://api.vercel.com';
 const VERCEL_TOKEN = process.env.VERCEL_TOKEN;
 const SLACK_BOT_TOKEN = process.env.SLACK_BOT_TOKEN;
 const VERCEL_TEAM_ID = process.env.VERCEL_TEAM_ID || '';
+const DEMO_CHANNEL = process.env.SLACK_DEMO_CHANNEL || 'C0AQS5JV0KE';
 
 // ---- HTTP Helpers ----
 
@@ -125,7 +126,7 @@ async function openModal(triggerId, channelId) {
         type: 'input',
         block_id: 'product_codes',
         label: { type: 'plain_text', text: 'Product Code(s)' },
-        hint: { type: 'plain_text', text: 'From Cylindo CMS product page. Comma-separate for multiple products.' },
+        hint: { type: 'plain_text', text: 'Product code from Cylindo CMS (e.g. HAVEN COMFORT ARM SOFA). Comma-separate for multiple.' },
         element: {
           type: 'plain_text_input',
           action_id: 'value',
@@ -425,7 +426,7 @@ module.exports = async function handler(req, res) {
 
       const productCodes = productCodesRaw.split(',').map((p) => p.trim()).filter(Boolean);
 
-      // Close the modal with a "generating" message
+      // Close the modal immediately
       res.status(200).json({
         response_action: 'update',
         view: {
@@ -434,69 +435,80 @@ module.exports = async function handler(req, res) {
           blocks: [
             {
               type: 'section',
-              text: { type: 'mrkdwn', text: `:hourglass_flowing_sand: *Generating demo for ${brandName}...*\n\n:satellite: Fetching product data from Cylindo Content API...\n:package: Products: ${productCodes.join(', ')}\n\nThis modal will close. Check the channel for the result.` },
+              text: { type: 'mrkdwn', text: `:hourglass_flowing_sand: *Generating demo for ${brandName}...*\n\nCheck <#${DEMO_CHANNEL}> for progress and the result.` },
             },
           ],
         },
       });
 
-      // Do the work asynchronously
+      // Post "starting" message to #demo-page-generator immediately
+      try {
+        await slackPostMessage(DEMO_CHANNEL, `Generating demo for ${brandName}...`, [
+          {
+            type: 'header',
+            text: { type: 'plain_text', text: `🔄 Generating Demo: ${brandName}` },
+          },
+          {
+            type: 'section',
+            text: {
+              type: 'mrkdwn',
+              text: [
+                `*Requested by:* <@${userId}>`,
+                `*Customer ID:* ${customerId}`,
+                `*Curator Code:* \`${curatorCode}\``,
+                `*Products:* ${productCodes.join(', ')}`,
+                brandUrl ? `*Reference site:* <${brandUrl}|${brandUrl}>` : '',
+                '',
+                ':satellite: Fetching product data from Cylindo Content API...',
+              ].join('\n'),
+            },
+          },
+        ]);
+      } catch (msgErr) {
+        console.error('Failed to post starting message:', msgErr);
+      }
+
+      // Do the work
       try {
         const result = await generateDemo({ customerId, productCodes, curatorCode, brandName, brandUrl });
 
-        // Post to the channel where /cylindo-demo was invoked
-        // Fall back to DM if no channel context
-        let postChannelId = channelId;
-        if (!postChannelId) {
-          const dmResult = await slackAPI('conversations.open', { users: userId });
-          postChannelId = dmResult.data?.channel?.id;
-        }
-
-        if (postChannelId) {
-          await slackPostMessage(postChannelId, `Demo ready for ${brandName}!`, [
-            {
-              type: 'header',
-              text: { type: 'plain_text', text: `✅ Demo Ready: ${brandName}` },
+        // Post success to #demo-page-generator
+        await slackPostMessage(DEMO_CHANNEL, `Demo ready for ${brandName}!`, [
+          {
+            type: 'header',
+            text: { type: 'plain_text', text: `✅ Demo Ready: ${brandName}` },
+          },
+          {
+            type: 'section',
+            text: {
+              type: 'mrkdwn',
+              text: [
+                `*Requested by:* <@${userId}>`,
+                `*Customer ID:* ${customerId}`,
+                `*Curator Code:* \`${curatorCode}\``,
+                `*Products:*`,
+                ...result.statusParts,
+                '',
+                `:rocket: *Demo URL:* <${result.demoUrl}|${result.demoUrl}>`,
+                `:page_facing_up: Tear sheet available on the demo page`,
+                brandUrl ? `\n:link: *Reference site:* <${brandUrl}|${brandUrl}>` : '',
+              ].join('\n'),
             },
-            {
-              type: 'section',
-              text: {
-                type: 'mrkdwn',
-                text: [
-                  `*Requested by:* <@${userId}>`,
-                  `*Customer ID:* ${customerId}`,
-                  `*Curator Code:* ${curatorCode}`,
-                  `*Products:*`,
-                  ...result.statusParts,
-                  '',
-                  `:rocket: *Demo URL:* <${result.demoUrl}|${result.demoUrl}>`,
-                  `:page_facing_up: Tear sheet available on the demo page`,
-                  brandUrl ? `\n:link: *Reference site:* <${brandUrl}|${brandUrl}>` : '',
-                ].join('\n'),
-              },
-            },
-            {
-              type: 'context',
-              elements: [{ type: 'mrkdwn', text: `Generated via /cylindo-demo | Cylindo Demo Generator` }],
-            },
-          ]);
-        }
+          },
+          {
+            type: 'context',
+            elements: [{ type: 'mrkdwn', text: `Generated via /cylindo-demo | Cylindo Demo Generator` }],
+          },
+        ]);
       } catch (error) {
         console.error('Generation error:', error);
-        // Post error to channel or DM
-        let errChannelId = channelId;
-        if (!errChannelId) {
-          const dmResult = await slackAPI('conversations.open', { users: userId });
-          errChannelId = dmResult.data?.channel?.id;
-        }
-        if (errChannelId) {
-          await slackPostMessage(errChannelId, `Error generating demo`, [
-            {
-              type: 'section',
-              text: { type: 'mrkdwn', text: `:x: *Error generating demo for ${brandName}:*\n\`\`\`${error.message}\`\`\`\n\nPlease check your inputs and try again.` },
-            },
-          ]);
-        }
+        // Post error to #demo-page-generator
+        await slackPostMessage(DEMO_CHANNEL, `Error generating demo`, [
+          {
+            type: 'section',
+            text: { type: 'mrkdwn', text: `:x: *Error generating demo for ${brandName}:*\n\`\`\`${error.message}\`\`\`\n\n*Requested by:* <@${userId}>\n\nPlease check your inputs and try again.` },
+          },
+        ]);
       }
       return;
     }
