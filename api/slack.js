@@ -21,6 +21,11 @@ const SLACK_BOT_TOKEN = process.env.SLACK_BOT_TOKEN;
 const VERCEL_TEAM_ID = process.env.VERCEL_TEAM_ID || '';
 const DEMO_CHANNEL = process.env.SLACK_DEMO_CHANNEL || 'C0AQS5JV0KE';
 
+// ---- Logging ----
+function log(label, ...args) {
+  console.log(`[cylindo-demo][${label}]`, new Date().toISOString(), ...args);
+}
+
 // ---- HTTP Helpers ----
 
 function fetchJSON(url) {
@@ -87,7 +92,13 @@ async function slackAPI(method, body) {
 }
 
 async function slackPostMessage(channel, text, blocks) {
-  return await slackAPI('chat.postMessage', { channel, text, blocks });
+  const result = await slackAPI('chat.postMessage', { channel, text, blocks });
+  if (result.data && result.data.ok === false) {
+    log('slack', 'chat.postMessage FAILED:', result.data.error, '| channel:', channel);
+  } else {
+    log('slack', 'chat.postMessage OK to channel:', channel);
+  }
+  return result;
 }
 
 // ---- Open Modal ----
@@ -103,18 +114,18 @@ async function openModal(triggerId, channelId) {
     blocks: [
       {
         type: 'header',
-        text: { type: 'plain_text', text: '🚀 Generate a Cylindo Product Demo' },
+        text: { type: 'plain_text', text: 'Generate a Cylindo Product Demo' },
       },
       {
         type: 'context',
-        elements: [{ type: 'mrkdwn', text: 'Fill in the details below. A branded demo page with 3D viewer and tear sheet will be auto-generated and deployed.' }],
+        elements: [{ type: 'mrkdwn', text: 'Creates a branded product page with interactive 360° Cylindo viewer, real-time material/finish selectors with swatch images, and a downloadable tear sheet. Deployed instantly to a shareable URL.' }],
       },
       { type: 'divider' },
       {
         type: 'input',
         block_id: 'customer_id',
         label: { type: 'plain_text', text: 'Cylindo Account Number' },
-        hint: { type: 'plain_text', text: 'Found in CMS → Settings → Account number. Demo Customer = 4404' },
+        hint: { type: 'plain_text', text: 'CMS → Settings → Account. Use 4404 for Demo Customer.' },
         element: {
           type: 'plain_text_input',
           action_id: 'value',
@@ -126,44 +137,45 @@ async function openModal(triggerId, channelId) {
         type: 'input',
         block_id: 'product_codes',
         label: { type: 'plain_text', text: 'Product Code(s)' },
-        hint: { type: 'plain_text', text: 'Product code from Cylindo CMS (e.g. HAVEN COMFORT ARM SOFA). Comma-separate for multiple.' },
+        hint: { type: 'plain_text', text: 'Exact product code from CMS → Products. Comma-separate for multiple products on one page.' },
         element: {
           type: 'plain_text_input',
           action_id: 'value',
-          placeholder: { type: 'plain_text', text: 'HAVEN COMFORT ARM SOFA, NORFOLK WIDE ARM PLEATED SOFA' },
+          placeholder: { type: 'plain_text', text: 'EVERLY SIDE DINING CHAIR, OLIVIA DINING TABLE' },
         },
       },
       {
         type: 'input',
         block_id: 'curator_code',
         label: { type: 'plain_text', text: 'Curator Code' },
-        hint: { type: 'plain_text', text: 'Listed at top of the Curator page. Make sure Curator is published!' },
+        hint: { type: 'plain_text', text: 'Alphanumeric code at top of the Curator page (e.g. pw70b37m). Curator must be published.' },
         element: {
           type: 'plain_text_input',
           action_id: 'value',
-          placeholder: { type: 'plain_text', text: 'a7ap4vak' },
+          placeholder: { type: 'plain_text', text: 'pw70b37m' },
         },
       },
       {
         type: 'input',
         block_id: 'brand_name',
         label: { type: 'plain_text', text: 'Brand / Client Name' },
+        hint: { type: 'plain_text', text: 'Used for page branding, header, and the deployed URL (e.g. cylindo-demo-james-james.vercel.app).' },
         element: {
           type: 'plain_text_input',
           action_id: 'value',
-          placeholder: { type: 'plain_text', text: 'Serena & Lily' },
+          placeholder: { type: 'plain_text', text: 'James & James' },
         },
       },
       {
         type: 'input',
         block_id: 'brand_url',
-        label: { type: 'plain_text', text: 'Brand PDP Website URL' },
-        hint: { type: 'plain_text', text: 'Link to a product page on the client\'s website (for branding reference)' },
+        label: { type: 'plain_text', text: 'Client Website URL (optional)' },
+        hint: { type: 'plain_text', text: 'Link to a product page on the client\'s site. Used as the "Shop" button destination.' },
         optional: true,
         element: {
           type: 'url_text_input',
           action_id: 'value',
-          placeholder: { type: 'plain_text', text: 'https://www.serenaandlily.com/products/haven-sofa/' },
+          placeholder: { type: 'plain_text', text: 'https://jamesandjamesfurniture.com/products/everly-side-chair' },
         },
       },
     ],
@@ -318,14 +330,20 @@ async function deployToVercel(projectName, files) {
 // ---- Generate Demo (core logic) ----
 
 async function generateDemo({ customerId, productCodes, curatorCode, brandName, brandUrl }) {
+  log('generate', 'Starting for', brandName, '| products:', productCodes.join(', '));
   const products = [];
   const statusParts = [];
 
   for (const code of productCodes) {
+    log('generate', 'Fetching product config:', code.trim());
     const configData = await fetchProductConfig(customerId, code.trim());
+    if (!configData) {
+      log('generate', 'WARNING: No config data returned for', code.trim());
+    }
     const features = extractFeatures(configData);
     products.push(buildProduct(code.trim(), features));
     const totalOpts = features.reduce((s, f) => s + f.options.length, 0);
+    log('generate', 'Product ready:', code.trim(), '|', features.length, 'features,', totalOpts, 'options');
     statusParts.push(`• *${formatName(code.trim())}*: ${features.length} feature group(s), ${totalOpts} options`);
   }
 
@@ -336,11 +354,17 @@ async function generateDemo({ customerId, productCodes, curatorCode, brandName, 
   const path = require('path');
   let stylesCSS, appJS;
   try {
-    stylesCSS = fs.readFileSync(path.join(process.cwd(), 'templates', 'styles.css'), 'utf-8');
-    appJS = fs.readFileSync(path.join(process.cwd(), 'templates', 'app.js'), 'utf-8');
-  } catch {
+    const cssPath = path.join(process.cwd(), 'templates', 'styles.css');
+    const jsPath = path.join(process.cwd(), 'templates', 'app.js');
+    log('generate', 'Reading templates from filesystem:', cssPath);
+    stylesCSS = fs.readFileSync(cssPath, 'utf-8');
+    appJS = fs.readFileSync(jsPath, 'utf-8');
+    log('generate', 'Templates loaded from filesystem OK | CSS:', stylesCSS.length, 'bytes | JS:', appJS.length, 'bytes');
+  } catch (fsErr) {
+    log('generate', 'Filesystem read failed:', fsErr.message, '| Falling back to GitHub raw URLs');
     const baseUrl = 'https://raw.githubusercontent.com/msheppard7-wq/cylindo-demo-generator/main/templates';
     [stylesCSS, appJS] = await Promise.all([fetchRawText(`${baseUrl}/styles.css`), fetchRawText(`${baseUrl}/app.js`)]);
+    log('generate', 'Templates loaded from GitHub | CSS:', stylesCSS.length, 'bytes | JS:', appJS.length, 'bytes');
   }
 
   const slug = slugify(brandName);
@@ -352,12 +376,21 @@ async function generateDemo({ customerId, productCodes, curatorCode, brandName, 
     { path: 'config.json', content: JSON.stringify(config, null, 2) },
   ];
 
+  log('generate', 'Deploying to Vercel as', projectName, '| files:', files.length);
   const deployment = await deployToVercel(projectName, files);
+  log('generate', 'Vercel response:', deployment.status, JSON.stringify(deployment.data).substring(0, 500));
+
+  if (deployment.status !== 200 && deployment.status !== 201) {
+    const errMsg = deployment.data?.error?.message || deployment.data?.error?.code || JSON.stringify(deployment.data);
+    throw new Error(`Vercel deployment failed (HTTP ${deployment.status}): ${errMsg}`);
+  }
+
   let demoUrl = `https://${projectName}.vercel.app`;
-  if ((deployment.status === 200 || deployment.status === 201) && deployment.data.url) {
+  if (deployment.data.url) {
     demoUrl = `https://${deployment.data.url}`;
   }
 
+  log('generate', 'Demo URL:', demoUrl);
   return { demoUrl, statusParts, projectName };
 }
 
@@ -442,6 +475,7 @@ module.exports = async function handler(req, res) {
       });
 
       // Post "starting" message to #demo-page-generator immediately
+      log('submit', 'Posting starting message to channel:', DEMO_CHANNEL);
       try {
         await slackPostMessage(DEMO_CHANNEL, `Generating demo for ${brandName}...`, [
           {
@@ -465,12 +499,14 @@ module.exports = async function handler(req, res) {
           },
         ]);
       } catch (msgErr) {
-        console.error('Failed to post starting message:', msgErr);
+        log('submit', 'FAILED to post starting message:', msgErr.message);
       }
 
       // Do the work
       try {
+        log('submit', 'Starting generateDemo...');
         const result = await generateDemo({ customerId, productCodes, curatorCode, brandName, brandUrl });
+        log('submit', 'generateDemo complete, posting success to channel');
 
         // Post success to #demo-page-generator
         await slackPostMessage(DEMO_CHANNEL, `Demo ready for ${brandName}!`, [
@@ -500,15 +536,20 @@ module.exports = async function handler(req, res) {
             elements: [{ type: 'mrkdwn', text: `Generated via /cylindo-demo | Cylindo Demo Generator` }],
           },
         ]);
+        log('submit', 'Success message posted');
       } catch (error) {
-        console.error('Generation error:', error);
-        // Post error to #demo-page-generator
-        await slackPostMessage(DEMO_CHANNEL, `Error generating demo`, [
-          {
-            type: 'section',
-            text: { type: 'mrkdwn', text: `:x: *Error generating demo for ${brandName}:*\n\`\`\`${error.message}\`\`\`\n\n*Requested by:* <@${userId}>\n\nPlease check your inputs and try again.` },
-          },
-        ]);
+        log('submit', 'GENERATION ERROR:', error.message, error.stack);
+        // Post error to #demo-page-generator (wrapped in its own try/catch)
+        try {
+          await slackPostMessage(DEMO_CHANNEL, `Error generating demo`, [
+            {
+              type: 'section',
+              text: { type: 'mrkdwn', text: `:x: *Error generating demo for ${brandName}:*\n\`\`\`${error.message}\`\`\`\n\n*Requested by:* <@${userId}>\n\nPlease check your inputs and try again.` },
+            },
+          ]);
+        } catch (postErr) {
+          log('submit', 'ALSO FAILED to post error to Slack:', postErr.message);
+        }
       }
       return;
     }
