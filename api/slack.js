@@ -101,6 +101,31 @@ async function slackPostMessage(channel, text, blocks) {
   return result;
 }
 
+// ---- Channel Button ----
+
+async function postButtonMessage(channelId) {
+  return await slackPostMessage(channelId, 'Cylindo Demo Generator', [
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: ':rocket: *Cylindo Demo Generator*\nCreate a branded product demo page with interactive 360° Cylindo viewer, real-time material/finish selectors, and downloadable tear sheet. Deployed instantly to a shareable URL.',
+      },
+    },
+    {
+      type: 'actions',
+      elements: [
+        {
+          type: 'button',
+          action_id: 'open_demo_form',
+          text: { type: 'plain_text', text: '▶️ Create Demo' },
+          style: 'primary',
+        },
+      ],
+    },
+  ]);
+}
+
 // ---- Open Modal ----
 
 async function openModal(triggerId, channelId) {
@@ -418,6 +443,22 @@ module.exports = async function handler(req, res) {
 
   // ---- Handle: Slash command → open modal ----
   if (body.command === '/cylindo-demo') {
+    // Setup sub-command: post the button message to the channel
+    if (body.text && body.text.trim().toLowerCase() === 'setup') {
+      try {
+        await postButtonMessage(body.channel_id);
+        return res.status(200).json({
+          response_type: 'ephemeral',
+          text: ':white_check_mark: Demo Generator button posted! Pin the message to keep it accessible.',
+        });
+      } catch (err) {
+        return res.status(200).json({
+          response_type: 'ephemeral',
+          text: `:x: Failed to post button: ${err.message}`,
+        });
+      }
+    }
+
     const triggerId = body.trigger_id;
 
     if (!triggerId) {
@@ -446,9 +487,26 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  // ---- Handle: Modal submission (interactive payload) ----
+  // ---- Handle: Interactive payloads (button clicks + modal submissions) ----
   if (body.payload) {
     const payload = JSON.parse(body.payload);
+
+    // Button click → open modal
+    if (payload.type === 'block_actions') {
+      const action = payload.actions && payload.actions[0];
+      if (action && action.action_id === 'open_demo_form') {
+        log('button', 'Create Demo button clicked by', payload.user?.name);
+        try {
+          await openModal(payload.trigger_id, payload.channel?.id || DEMO_CHANNEL);
+          return res.status(200).send('');
+        } catch (err) {
+          log('button', 'Failed to open modal:', err.message);
+          return res.status(200).send('');
+        }
+      }
+      // Unknown action — just acknowledge
+      return res.status(200).send('');
+    }
 
     if (payload.type === 'view_submission' && payload.view.callback_id === 'cylindo_demo_submit') {
       const values = payload.view.state.values;

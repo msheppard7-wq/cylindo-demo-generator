@@ -89,9 +89,67 @@ async function slackPostMessage(channel, text, blocks) {
   if (result.data && result.data.ok === false) {
     log('slack', 'chat.postMessage FAILED:', result.data.error, '| channel:', channel);
   } else {
-    log('slack', 'chat.postMessage OK to channel:', channel);
+    log('slack', 'chat.postMessage OK to channel:', channel, '| ts:', result.data?.ts);
   }
   return result;
+}
+
+async function slackUpdateMessage(channel, ts, text, blocks) {
+  if (!ts) return;
+  const result = await slackAPI('chat.update', { channel, ts, text, blocks });
+  if (result.data && result.data.ok === false) {
+    log('slack', 'chat.update FAILED:', result.data.error);
+  }
+  return result;
+}
+
+function buildTrackerBlocks({ brandName, customerId, curatorCode, productCodes, brandUrl, userId, status, statusEmoji, statusDetail, demoUrl, errorMessage, statusParts }) {
+  const blocks = [
+    {
+      type: 'header',
+      text: { type: 'plain_text', text: `Demo Request: ${brandName}` },
+    },
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: [
+          userId ? `*Requested by:* <@${userId}>` : '',
+          `*Customer ID:* ${customerId}`,
+          `*Curator Code:* \`${curatorCode}\``,
+          `*Products:* ${productCodes.join(', ')}`,
+          brandUrl ? `*Reference:* <${brandUrl}|${brandUrl}>` : '',
+        ].filter(Boolean).join('\n'),
+      },
+    },
+    { type: 'divider' },
+  ];
+
+  // Status section
+  let statusText = `${statusEmoji} *Status: ${status}*`;
+  if (statusDetail) statusText += `\n${statusDetail}`;
+  if (statusParts && statusParts.length > 0) {
+    statusText += '\n\n' + statusParts.join('\n');
+  }
+  if (demoUrl) {
+    statusText += `\n\n:rocket: *Demo URL:* <${demoUrl}|${demoUrl}>`;
+    statusText += `\n:page_facing_up: Tear sheet available on the demo page`;
+  }
+  if (errorMessage) {
+    statusText += `\n\n\`\`\`${errorMessage}\`\`\`\nPlease check your inputs and try again.`;
+  }
+
+  blocks.push({
+    type: 'section',
+    text: { type: 'mrkdwn', text: statusText },
+  });
+
+  blocks.push({
+    type: 'context',
+    elements: [{ type: 'mrkdwn', text: `Last updated: <!date^${Math.floor(Date.now() / 1000)}^{date_short_pretty} at {time}|${new Date().toISOString()}> | Cylindo Demo Generator` }],
+  });
+
+  return blocks;
 }
 
 // ---- Content API ----
@@ -250,10 +308,12 @@ async function deployToVercel(projectName, files) {
 
 // ---- Generate Demo (core logic) ----
 
-async function generateDemo({ customerId, productCodes, curatorCode, brandName, brandUrl }) {
+async function generateDemo({ customerId, productCodes, curatorCode, brandName, brandUrl, onStatusUpdate }) {
   log('gen', 'Starting for', brandName, '| products:', productCodes.join(', '));
   const products = [];
   const statusParts = [];
+
+  if (onStatusUpdate) await onStatusUpdate(':arrows_counterclockwise: Fetching product data from Cylindo Content API...');
 
   for (const code of productCodes) {
     log('gen', 'Fetching product config:', code.trim());
@@ -294,6 +354,8 @@ async function generateDemo({ customerId, productCodes, curatorCode, brandName, 
     { path: 'config.json', content: JSON.stringify(config, null, 2) },
   ];
 
+  if (onStatusUpdate) await onStatusUpdate(':arrows_counterclockwise: Deploying to Vercel...');
+
   log('gen', 'Deploying to Vercel as', projectName, '| files:', files.length);
   const deployment = await deployToVercel(projectName, files);
   log('gen', 'Vercel response:', deployment.status, JSON.stringify(deployment.data).substring(0, 500));
@@ -328,78 +390,54 @@ module.exports = async function handler(req, res) {
     return res.status(400).json({ error: 'Missing required fields: customerId, productCodes, curatorCode, brandName' });
   }
 
-  // Post "starting" message
+  const trackerParams = { brandName, customerId, curatorCode, productCodes, brandUrl, userId };
+
+  // Post initial tracker message — "Submitted"
+  let messageTs = null;
   try {
-    await slackPostMessage(DEMO_CHANNEL, `Generating demo for ${brandName}...`, [
-      {
-        type: 'header',
-        text: { type: 'plain_text', text: `🔄 Generating Demo: ${brandName}` },
-      },
-      {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: [
-            userId ? `*Requested by:* <@${userId}>` : '',
-            `*Customer ID:* ${customerId}`,
-            `*Curator Code:* \`${curatorCode}\``,
-            `*Products:* ${productCodes.join(', ')}`,
-            brandUrl ? `*Reference site:* <${brandUrl}|${brandUrl}>` : '',
-            '',
-            ':satellite: Fetching product data from Cylindo Content API...',
-          ].filter(Boolean).join('\n'),
-        },
-      },
-    ]);
+    const initResult = await slackPostMessage(DEMO_CHANNEL, `Demo request: ${brandName}`,
+      buildTrackerBlocks({ ...trackerParams, status: 'Submitted', statusEmoji: ':hourglass_flowing_sand:' })
+    );
+    messageTs = initResult.data?.ts;
+    log('tracker', 'Initial message posted, ts:', messageTs);
   } catch (msgErr) {
-    log('start', 'FAILED to post starting message:', msgErr.message);
+    log('tracker', 'FAILED to post initial tracker:', msgErr.message);
   }
+
+  // Status update callback for generateDemo
+  const onStatusUpdate = async (detail) => {
+    try {
+      await slackUpdateMessage(DEMO_CHANNEL, messageTs, `Generating: ${brandName}`,
+        buildTrackerBlocks({ ...trackerParams, status: 'In Progress', statusEmoji: ':arrows_counterclockwise:', statusDetail: detail })
+      );
+    } catch (e) {
+      log('tracker', 'Status update failed:', e.message);
+    }
+  };
 
   // Do the work
   try {
-    const result = await generateDemo({ customerId, productCodes, curatorCode, brandName, brandUrl });
+    const result = await generateDemo({ customerId, productCodes, curatorCode, brandName, brandUrl, onStatusUpdate });
 
-    await slackPostMessage(DEMO_CHANNEL, `Demo ready for ${brandName}!`, [
-      {
-        type: 'header',
-        text: { type: 'plain_text', text: `✅ Demo Ready: ${brandName}` },
-      },
-      {
-        type: 'section',
-        text: {
-          type: 'mrkdwn',
-          text: [
-            userId ? `*Requested by:* <@${userId}>` : '',
-            `*Customer ID:* ${customerId}`,
-            `*Curator Code:* \`${curatorCode}\``,
-            `*Products:*`,
-            ...result.statusParts,
-            '',
-            `:rocket: *Demo URL:* <${result.demoUrl}|${result.demoUrl}>`,
-            `:page_facing_up: Tear sheet available on the demo page`,
-            brandUrl ? `\n:link: *Reference site:* <${brandUrl}|${brandUrl}>` : '',
-          ].filter(Boolean).join('\n'),
-        },
-      },
-      {
-        type: 'context',
-        elements: [{ type: 'mrkdwn', text: `Generated via /cylindo-demo | Cylindo Demo Generator` }],
-      },
-    ]);
+    // Final update — "Created"
+    await slackUpdateMessage(DEMO_CHANNEL, messageTs, `Demo ready: ${brandName}`,
+      buildTrackerBlocks({ ...trackerParams, status: 'Created', statusEmoji: ':white_check_mark:', demoUrl: result.demoUrl, statusParts: result.statusParts })
+    );
+    log('tracker', 'Final status: Created');
 
     return res.status(200).json({ ok: true, demoUrl: result.demoUrl });
   } catch (error) {
     log('error', 'GENERATION ERROR:', error.message, error.stack);
+
+    // Final update — "Failed"
     try {
-      await slackPostMessage(DEMO_CHANNEL, `Error generating demo`, [
-        {
-          type: 'section',
-          text: { type: 'mrkdwn', text: `:x: *Error generating demo for ${brandName}:*\n\`\`\`${error.message}\`\`\`\n\n${userId ? `*Requested by:* <@${userId}>\n\n` : ''}Please check your inputs and try again.` },
-        },
-      ]);
+      await slackUpdateMessage(DEMO_CHANNEL, messageTs, `Demo failed: ${brandName}`,
+        buildTrackerBlocks({ ...trackerParams, status: 'Failed', statusEmoji: ':x:', errorMessage: error.message })
+      );
     } catch (postErr) {
-      log('error', 'ALSO FAILED to post error to Slack:', postErr.message);
+      log('error', 'ALSO FAILED to update tracker:', postErr.message);
     }
+
     return res.status(500).json({ error: error.message });
   }
 };
