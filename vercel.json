@@ -2,6 +2,9 @@
   "version": 2,
   "functions": {
     "api/slack.js": {
+      "maxDuration": 30
+    },
+    "api/generate.js": {
       "maxDuration": 60,
       "includeFiles": "templates/**"
     }
