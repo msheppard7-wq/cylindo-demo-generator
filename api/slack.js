@@ -296,11 +296,22 @@ function getIndexHTML() {
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="announcement-bar" id="announcement-bar"></div>
-  <header class="site-header"><div class="header-inner"><a href="#" class="logo" id="logo"></a><nav class="main-nav" id="main-nav"></nav><div class="header-actions"><button class="icon-btn cart-btn" aria-label="Cart"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg><span class="cart-count">0</span></button></div></div></header>
+  <header class="site-header">
+    <div class="header-announcement"><div class="header-announcement-inner" id="announcement-bar"></div></div>
+    <div class="header-main"><div class="header-main-inner">
+      <button class="menu-btn" type="button" aria-label="Menu"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+      <a href="#" class="logo" id="logo"></a>
+      <div class="header-actions">
+        <a href="#" aria-label="Search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></a>
+        <a href="#" aria-label="Account"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></a>
+        <a href="#" aria-label="Cart"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></a>
+      </div>
+    </div></div>
+    <div class="main-nav-wrap"><nav class="main-nav" id="main-nav"></nav></div>
+  </header>
   <div class="product-switcher" id="product-switcher"></div>
   <div class="breadcrumb"><div class="container" id="breadcrumb"></div></div>
-  <main class="product-section"><div class="container product-grid"><div class="product-media"><div class="cylindo-wrapper" id="cylindo-container"></div><button class="tearsheet-btn" id="tearsheet-btn" type="button"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg><span>Download Tear Sheet</span></button></div><div class="product-info" id="product-info"></div></div></main>
+  <main class="product-section"><div class="container product-grid"><div class="product-media"><div class="curator-meta" id="curator-meta"></div><div class="cylindo-wrapper" id="cylindo-container"></div><button class="tearsheet-btn" id="tearsheet-btn" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg> Download Tear Sheet</button></div><div class="product-info" id="product-info"></div></div></main>
   <section class="features-section"><div class="container"><h2 class="section-title">What Makes It Special</h2><div class="features-grid" id="features-grid"></div></div></section>
   <section class="specs-section"><div class="container"><h2 class="section-title">Specifications</h2><div class="specs-grid" id="specs-grid"></div></div></section>
   <section class="faq-section"><div class="container"><h2 class="section-title">Frequently Asked Questions</h2><div class="faq-list" id="faq-list"></div></div></section>

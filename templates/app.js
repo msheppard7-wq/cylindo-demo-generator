@@ -92,8 +92,19 @@ function updateURL() {
 
 function renderBrand() {
   const { brand } = config;
-  document.getElementById('announcement-bar').textContent = brand.announcementText;
-  document.getElementById('logo').textContent = brand.logoText;
+  const announcement = document.getElementById('announcement-bar');
+  if (announcement) announcement.textContent = brand.announcementText;
+
+  const logo = document.getElementById('logo');
+  if (brand.logoImageUrl) {
+    if (brand.logoImageUrlDark) {
+      logo.innerHTML = `<picture class="logo-picture"><source srcset="${brand.logoImageUrlDark}" media="(prefers-color-scheme: dark)" /><img src="${brand.logoImageUrl}" alt="${brand.name}" class="logo-image" /></picture>`;
+    } else {
+      logo.innerHTML = `<img src="${brand.logoImageUrl}" alt="${brand.name}" class="logo-image" />`;
+    }
+  } else {
+    logo.textContent = brand.logoText;
+  }
 
   const nav = document.getElementById('main-nav');
   nav.innerHTML = brand.navLinks.map(link =>
@@ -159,17 +170,32 @@ function renderProduct() {
     `<a href="#">${c}</a><span class="sep">/</span>`
   ).join('') + `<span class="current">${product.name}</span>`;
 
-  // Cylindo Viewer
+  // Cylindo Viewer — Curator Gallery Mode
   const container = document.getElementById('cylindo-container');
   container.innerHTML = `
     <cylindo-viewer
       customer-id="${cylindo.customerId}"
       code="${product.code}"
       remote-config="${cylindo.remoteConfig}"
+      presentation="gallery"
+      background-color="#ffffff"
+      controls="ar fullscreen nav zoom indicators"
+      interaction-hiding-delay="Infinity"
+      ignore-unknown-features="true"
+      style="background:#ffffff;"
     >
       <img alt="${product.name}" slot="placeholder" src="${getPlaceholderUrl(product.code)}" />
     </cylindo-viewer>
   `;
+
+  // Curator meta badge
+  const curatorMeta = document.getElementById('curator-meta');
+  if (curatorMeta) {
+    curatorMeta.innerHTML = `
+      <span class="curator-pill">Cylindo Curator</span>
+      <span class="curator-copy">${product.name} \u00b7 ${product.code}</span>
+    `;
+  }
 
   // Stars
   const fullStars = Math.floor(product.rating);
@@ -193,10 +219,11 @@ function renderProduct() {
         <label class="option-label">${feature.label}: <span class="feature-selected" data-feature="${feature.code}">${firstOption.name}</span></label>
         <div class="fabric-options" data-feature-code="${feature.code}">
           ${feature.options.map((opt, i) =>
-            `<button class="fabric-btn${i === 0 ? ' active' : ''}" data-value="${opt.value}" data-name="${opt.name}">${opt.name}</button>`
+            `<button class="fabric-btn${i === 0 ? ' active' : ''}" data-value="${opt.value}" data-name="${opt.name}" aria-label="${feature.label}: ${opt.name}" title="${opt.name}">
+              <img src="${getSwatchUrl(product.code, feature.code, opt.value, 200)}" alt="${opt.name}" loading="lazy" onerror="this.style.display='none'; this.parentElement.classList.add('fallback')">
+            </button>`
           ).join('')}
         </div>
-        <a href="#" class="swatch-link">Order Free Swatches &rarr;</a>
       </div>
     `;
   });
