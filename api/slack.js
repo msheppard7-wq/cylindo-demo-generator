@@ -416,6 +416,89 @@ module.exports = async function handler(req, res) {
 
   const body = req.body;
 
+  // ---- Handle: Internal generation request (fired from modal submission) ----
+  if (body._generate) {
+    log('worker', 'Received generation request for', body.brandName);
+    const { customerId, productCodes, curatorCode, brandName, brandUrl, userId } = body;
+
+    // Post "starting" message
+    try {
+      await slackPostMessage(DEMO_CHANNEL, `Generating demo for ${brandName}...`, [
+        {
+          type: 'header',
+          text: { type: 'plain_text', text: `🔄 Generating Demo: ${brandName}` },
+        },
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: [
+              `*Requested by:* <@${userId}>`,
+              `*Customer ID:* ${customerId}`,
+              `*Curator Code:* \`${curatorCode}\``,
+              `*Products:* ${productCodes.join(', ')}`,
+              brandUrl ? `*Reference site:* <${brandUrl}|${brandUrl}>` : '',
+              '',
+              ':satellite: Fetching product data from Cylindo Content API...',
+            ].join('\n'),
+          },
+        },
+      ]);
+    } catch (msgErr) {
+      log('worker', 'FAILED to post starting message:', msgErr.message);
+    }
+
+    // Do the work
+    try {
+      log('worker', 'Starting generateDemo...');
+      const result = await generateDemo({ customerId, productCodes, curatorCode, brandName, brandUrl });
+      log('worker', 'generateDemo complete, posting success to channel');
+
+      await slackPostMessage(DEMO_CHANNEL, `Demo ready for ${brandName}!`, [
+        {
+          type: 'header',
+          text: { type: 'plain_text', text: `✅ Demo Ready: ${brandName}` },
+        },
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: [
+              `*Requested by:* <@${userId}>`,
+              `*Customer ID:* ${customerId}`,
+              `*Curator Code:* \`${curatorCode}\``,
+              `*Products:*`,
+              ...result.statusParts,
+              '',
+              `:rocket: *Demo URL:* <${result.demoUrl}|${result.demoUrl}>`,
+              `:page_facing_up: Tear sheet available on the demo page`,
+              brandUrl ? `\n:link: *Reference site:* <${brandUrl}|${brandUrl}>` : '',
+            ].join('\n'),
+          },
+        },
+        {
+          type: 'context',
+          elements: [{ type: 'mrkdwn', text: `Generated via /cylindo-demo | Cylindo Demo Generator` }],
+        },
+      ]);
+      log('worker', 'Success message posted');
+    } catch (error) {
+      log('worker', 'GENERATION ERROR:', error.message, error.stack);
+      try {
+        await slackPostMessage(DEMO_CHANNEL, `Error generating demo`, [
+          {
+            type: 'section',
+            text: { type: 'mrkdwn', text: `:x: *Error generating demo for ${brandName}:*\n\`\`\`${error.message}\`\`\`\n\n*Requested by:* <@${userId}>\n\nPlease check your inputs and try again.` },
+          },
+        ]);
+      } catch (postErr) {
+        log('worker', 'ALSO FAILED to post error to Slack:', postErr.message);
+      }
+    }
+
+    return res.status(200).json({ ok: true });
+  }
+
   // ---- Handle: Slash command → open modal ----
   if (body.command === '/cylindo-demo') {
     const triggerId = body.trigger_id;
@@ -470,8 +553,26 @@ module.exports = async function handler(req, res) {
 
       const productCodes = productCodesRaw.split(',').map((p) => p.trim()).filter(Boolean);
 
-      // Close the modal immediately
-      res.status(200).json({
+      // Fire generation as a SEPARATE function invocation (Vercel kills this one after res.json)
+      log('submit', 'Firing separate generation request for', brandName);
+      const host = req.headers['x-forwarded-host'] || req.headers.host || 'cylindo-demo-generator.vercel.app';
+      const generatePayload = JSON.stringify({
+        _generate: true,
+        customerId, productCodes, curatorCode, brandName, brandUrl, userId,
+      });
+
+      const genReq = https.request({
+        hostname: host,
+        path: '/api/slack',
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(generatePayload) },
+      }, () => {});
+      genReq.on('error', (err) => log('submit', 'Failed to fire generation request:', err.message));
+      genReq.write(generatePayload);
+      genReq.end();
+
+      // Close the modal immediately — generation runs in the separate request above
+      return res.status(200).json({
         response_action: 'update',
         view: {
           type: 'modal',
@@ -484,85 +585,6 @@ module.exports = async function handler(req, res) {
           ],
         },
       });
-
-      // Post "starting" message to #demo-page-generator immediately
-      log('submit', 'Posting starting message to channel:', DEMO_CHANNEL);
-      try {
-        await slackPostMessage(DEMO_CHANNEL, `Generating demo for ${brandName}...`, [
-          {
-            type: 'header',
-            text: { type: 'plain_text', text: `🔄 Generating Demo: ${brandName}` },
-          },
-          {
-            type: 'section',
-            text: {
-              type: 'mrkdwn',
-              text: [
-                `*Requested by:* <@${userId}>`,
-                `*Customer ID:* ${customerId}`,
-                `*Curator Code:* \`${curatorCode}\``,
-                `*Products:* ${productCodes.join(', ')}`,
-                brandUrl ? `*Reference site:* <${brandUrl}|${brandUrl}>` : '',
-                '',
-                ':satellite: Fetching product data from Cylindo Content API...',
-              ].join('\n'),
-            },
-          },
-        ]);
-      } catch (msgErr) {
-        log('submit', 'FAILED to post starting message:', msgErr.message);
-      }
-
-      // Do the work
-      try {
-        log('submit', 'Starting generateDemo...');
-        const result = await generateDemo({ customerId, productCodes, curatorCode, brandName, brandUrl });
-        log('submit', 'generateDemo complete, posting success to channel');
-
-        // Post success to #demo-page-generator
-        await slackPostMessage(DEMO_CHANNEL, `Demo ready for ${brandName}!`, [
-          {
-            type: 'header',
-            text: { type: 'plain_text', text: `✅ Demo Ready: ${brandName}` },
-          },
-          {
-            type: 'section',
-            text: {
-              type: 'mrkdwn',
-              text: [
-                `*Requested by:* <@${userId}>`,
-                `*Customer ID:* ${customerId}`,
-                `*Curator Code:* \`${curatorCode}\``,
-                `*Products:*`,
-                ...result.statusParts,
-                '',
-                `:rocket: *Demo URL:* <${result.demoUrl}|${result.demoUrl}>`,
-                `:page_facing_up: Tear sheet available on the demo page`,
-                brandUrl ? `\n:link: *Reference site:* <${brandUrl}|${brandUrl}>` : '',
-              ].join('\n'),
-            },
-          },
-          {
-            type: 'context',
-            elements: [{ type: 'mrkdwn', text: `Generated via /cylindo-demo | Cylindo Demo Generator` }],
-          },
-        ]);
-        log('submit', 'Success message posted');
-      } catch (error) {
-        log('submit', 'GENERATION ERROR:', error.message, error.stack);
-        // Post error to #demo-page-generator (wrapped in its own try/catch)
-        try {
-          await slackPostMessage(DEMO_CHANNEL, `Error generating demo`, [
-            {
-              type: 'section',
-              text: { type: 'mrkdwn', text: `:x: *Error generating demo for ${brandName}:*\n\`\`\`${error.message}\`\`\`\n\n*Requested by:* <@${userId}>\n\nPlease check your inputs and try again.` },
-            },
-          ]);
-        } catch (postErr) {
-          log('submit', 'ALSO FAILED to post error to Slack:', postErr.message);
-        }
-      }
-      return;
     }
 
     // Other interactive payloads — just acknowledge
