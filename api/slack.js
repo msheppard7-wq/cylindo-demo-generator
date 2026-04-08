@@ -1,17 +1,23 @@
 /* ============================================
-   Slack Slash Command + Interactive Modal Handler
+   Cylindo Demo Generator — Slack Handler
 
-   /cylindo-demo → Opens a form modal
-   User fills in fields → submits → generates demo → posts URL
+   Single entry point for all Slack interactions:
+   - /cylindo-demo slash command → opens modal
+   - /cylindo-demo setup → posts channel button
+   - Button click → opens modal
+   - Modal submit → closes modal, runs generation via waitUntil()
+   - Status tracker updates in-place in channel
 
-   Env vars required:
-     SLACK_BOT_TOKEN    - xoxb-... token
-     VERCEL_TOKEN       - Vercel deploy token
-     SLACK_SIGNING_SECRET - (optional) for request verification
+   Env vars:
+     SLACK_BOT_TOKEN     - xoxb-... token
+     VERCEL_TOKEN        - Vercel deploy token
+     SLACK_DEMO_CHANNEL  - Channel ID for status messages
+     VERCEL_TEAM_ID      - (optional) Vercel team ID
    ============================================ */
 
 const https = require('https');
 const { URL } = require('url');
+const { waitUntil } = require('@vercel/functions');
 
 // ---- Config ----
 const CONTENT_API = 'https://content.cylindo.com/api/v2';
@@ -96,9 +102,68 @@ async function slackPostMessage(channel, text, blocks) {
   if (result.data && result.data.ok === false) {
     log('slack', 'chat.postMessage FAILED:', result.data.error, '| channel:', channel);
   } else {
-    log('slack', 'chat.postMessage OK to channel:', channel);
+    log('slack', 'chat.postMessage OK to channel:', channel, '| ts:', result.data?.ts);
   }
   return result;
+}
+
+async function slackUpdateMessage(channel, ts, text, blocks) {
+  if (!ts) return;
+  const result = await slackAPI('chat.update', { channel, ts, text, blocks });
+  if (result.data && result.data.ok === false) {
+    log('slack', 'chat.update FAILED:', result.data.error);
+  }
+  return result;
+}
+
+// ---- Status Tracker Blocks ----
+
+function buildTrackerBlocks({ brandName, customerId, curatorCode, productCodes, brandUrl, userId, status, statusEmoji, statusDetail, demoUrl, errorMessage, statusParts }) {
+  const blocks = [
+    {
+      type: 'header',
+      text: { type: 'plain_text', text: `Demo Request: ${brandName}` },
+    },
+    {
+      type: 'section',
+      text: {
+        type: 'mrkdwn',
+        text: [
+          userId ? `*Requested by:* <@${userId}>` : '',
+          `*Customer ID:* ${customerId}`,
+          `*Curator Code:* \`${curatorCode}\``,
+          `*Products:* ${productCodes.join(', ')}`,
+          brandUrl ? `*Reference:* <${brandUrl}|${brandUrl}>` : '',
+        ].filter(Boolean).join('\n'),
+      },
+    },
+    { type: 'divider' },
+  ];
+
+  let statusText = `${statusEmoji} *Status: ${status}*`;
+  if (statusDetail) statusText += `\n${statusDetail}`;
+  if (statusParts && statusParts.length > 0) {
+    statusText += '\n\n' + statusParts.join('\n');
+  }
+  if (demoUrl) {
+    statusText += `\n\n:rocket: *Demo URL:* <${demoUrl}|${demoUrl}>`;
+    statusText += `\n:page_facing_up: Tear sheet available on the demo page`;
+  }
+  if (errorMessage) {
+    statusText += `\n\n\`\`\`${errorMessage}\`\`\`\nPlease check your inputs and try again.`;
+  }
+
+  blocks.push({
+    type: 'section',
+    text: { type: 'mrkdwn', text: statusText },
+  });
+
+  blocks.push({
+    type: 'context',
+    elements: [{ type: 'mrkdwn', text: `Last updated: <!date^${Math.floor(Date.now() / 1000)}^{date_short_pretty} at {time}|${new Date().toISOString()}> | Cylindo Demo Generator` }],
+  });
+
+  return blocks;
 }
 
 // ---- Channel Button ----
@@ -109,7 +174,7 @@ async function postButtonMessage(channelId) {
       type: 'section',
       text: {
         type: 'mrkdwn',
-        text: ':rocket: *Cylindo Demo Generator*\nCreate a branded product demo page with interactive 360° Cylindo viewer, real-time material/finish selectors, and downloadable tear sheet. Deployed instantly to a shareable URL.',
+        text: ':rocket: *Cylindo Demo Generator*\nCreate a branded product demo page with interactive 360\u00b0 Cylindo viewer, real-time material/finish selectors, and downloadable tear sheet. Deployed instantly to a shareable URL.',
       },
     },
     {
@@ -118,7 +183,7 @@ async function postButtonMessage(channelId) {
         {
           type: 'button',
           action_id: 'open_demo_form',
-          text: { type: 'plain_text', text: '▶️ Create Demo' },
+          text: { type: 'plain_text', text: '\u25b6\ufe0f Create Demo' },
           style: 'primary',
         },
       ],
@@ -143,14 +208,14 @@ async function openModal(triggerId, channelId) {
       },
       {
         type: 'context',
-        elements: [{ type: 'mrkdwn', text: 'Creates a branded product page with interactive 360° Cylindo viewer, real-time material/finish selectors with swatch images, and a downloadable tear sheet. Deployed instantly to a shareable URL.' }],
+        elements: [{ type: 'mrkdwn', text: 'Creates a branded product page with interactive 360\u00b0 Cylindo viewer, real-time material/finish selectors with swatch images, and a downloadable tear sheet. Deployed instantly to a shareable URL.' }],
       },
       { type: 'divider' },
       {
         type: 'input',
         block_id: 'customer_id',
         label: { type: 'plain_text', text: 'Cylindo Account Number' },
-        hint: { type: 'plain_text', text: 'CMS → Settings → Account. Use 4404 for Demo Customer.' },
+        hint: { type: 'plain_text', text: 'CMS \u2192 Settings \u2192 Account. Use 4404 for Demo Customer.' },
         element: {
           type: 'plain_text_input',
           action_id: 'value',
@@ -162,7 +227,7 @@ async function openModal(triggerId, channelId) {
         type: 'input',
         block_id: 'product_codes',
         label: { type: 'plain_text', text: 'Product Code(s)' },
-        hint: { type: 'plain_text', text: 'Exact product code from CMS → Products. Comma-separate for multiple products on one page.' },
+        hint: { type: 'plain_text', text: 'Exact product code from CMS \u2192 Products. Comma-separate for multiple products on one page.' },
         element: {
           type: 'plain_text_input',
           action_id: 'value',
@@ -253,10 +318,10 @@ function buildConfig(customerId, curatorCode, brandName, brandUrl, products) {
       logoText: brandName,
       tagline: 'Cylindo 3D Product Visualization Demo',
       website: brandUrl || '#',
-      announcementText: `Cylindo 3D Product Visualization Demo — ${brandName}`,
+      announcementText: `Cylindo 3D Product Visualization Demo \u2014 ${brandName}`,
       navLinks: ['Living', 'Bedroom', 'Dining', 'Outdoor', 'Sale'],
       navHighlight: 'Living',
-      footerCopyright: `${brandName} — Cylindo Demo`,
+      footerCopyright: `${brandName} \u2014 Cylindo Demo`,
       footerColumns: [
         { title: 'Customer Care', links: ['Contact Us', 'Shipping & Returns', 'FAQ', 'Design Services'] },
         { title: 'About', links: ['Our Story', 'Design Philosophy', 'Sustainability', 'Careers'] },
@@ -280,12 +345,12 @@ function buildProduct(productCode, features) {
   return {
     id: slugify(productCode), name, code: productCode,
     price: '$0.00', priceNote: 'Contact for pricing', rating: 4.8, reviewCount: 0,
-    description: `Explore the ${name} in full 360° with Cylindo's interactive 3D viewer. Select different options to see the product update in real-time.`,
+    description: `Explore the ${name} in full 360\u00b0 with Cylindo's interactive 3D viewer. Select different options to see the product update in real-time.`,
     badges: [{ text: 'Cylindo 3D', type: 'new' }],
     breadcrumb: ['Home', 'Products'],
     features,
     highlights: [
-      { title: 'Interactive 3D', description: "Rotate, zoom, and explore every angle with Cylindo's 360° viewer." },
+      { title: 'Interactive 3D', description: "Rotate, zoom, and explore every angle with Cylindo's 360\u00b0 viewer." },
       { title: 'Real-Time Configuration', description: 'Select different options and watch the product update instantly.' },
       { title: 'Material Swatches', description: 'View accurate material representations pulled from Cylindo Content API.' },
       { title: 'Tear Sheet', description: 'Generate a downloadable tear sheet with current configuration.' },
@@ -293,14 +358,14 @@ function buildProduct(productCode, features) {
     ],
     specs: [{
       group: 'Product Information',
-      items: [['Product Code', productCode], ['Available Options', `${features.reduce((s, f) => s + f.options.length, 0)} configurations`], ['3D Viewer', 'Cylindo Viewer v5'], ['Viewer Type', '360° + Zoom']],
+      items: [['Product Code', productCode], ['Available Options', `${features.reduce((s, f) => s + f.options.length, 0)} configurations`], ['3D Viewer', 'Cylindo Viewer v5'], ['Viewer Type', '360\u00b0 + Zoom']],
     }],
     faqs: [
       { q: 'What am I looking at?', a: 'This is a Cylindo-powered product demo showing how the 3D viewer integrates into a branded product page.' },
       { q: 'Can I interact with the 3D view?', a: 'Yes! Click and drag to rotate, scroll to zoom, and use the option selectors to change configuration in real-time.' },
       { q: 'What is the tear sheet?', a: 'Click "Download Tear Sheet" to generate a printable product sheet showing the current configuration with specs and swatches.' },
     ],
-    leadTime: 'Demo product — contact for availability',
+    leadTime: 'Demo product \u2014 contact for availability',
   };
 }
 
@@ -363,45 +428,47 @@ async function deployToVercel(projectName, files) {
   }));
 }
 
-// ---- Generate Demo (core logic) ----
+// ---- Core Generation Logic ----
 
-async function generateDemo({ customerId, productCodes, curatorCode, brandName, brandUrl }) {
-  log('generate', 'Starting for', brandName, '| products:', productCodes.join(', '));
+async function generateDemo({ customerId, productCodes, curatorCode, brandName, brandUrl, onStatusUpdate }) {
+  log('gen', 'Starting for', brandName, '| products:', productCodes.join(', '));
   const products = [];
   const statusParts = [];
 
+  if (onStatusUpdate) await onStatusUpdate(':arrows_counterclockwise: Fetching product data from Cylindo Content API...');
+
   for (const code of productCodes) {
-    log('generate', 'Fetching product config:', code.trim());
+    log('gen', 'Fetching product config:', code.trim());
     const configData = await fetchProductConfig(customerId, code.trim());
-    if (!configData) {
-      log('generate', 'WARNING: No config data returned for', code.trim());
-    }
+    if (!configData) log('gen', 'WARNING: No config data returned for', code.trim());
     const features = extractFeatures(configData);
     products.push(buildProduct(code.trim(), features));
     const totalOpts = features.reduce((s, f) => s + f.options.length, 0);
-    log('generate', 'Product ready:', code.trim(), '|', features.length, 'features,', totalOpts, 'options');
-    statusParts.push(`• *${formatName(code.trim())}*: ${features.length} feature group(s), ${totalOpts} options`);
+    log('gen', 'Product ready:', code.trim(), '|', features.length, 'features,', totalOpts, 'options');
+    statusParts.push(`\u2022 *${formatName(code.trim())}*: ${features.length} feature group(s), ${totalOpts} options`);
   }
 
   const config = buildConfig(customerId, curatorCode, brandName, brandUrl, products);
 
-  // Get template files
+  // Read template files
   const fs = require('fs');
   const path = require('path');
   let stylesCSS, appJS;
   try {
     const cssPath = path.join(process.cwd(), 'templates', 'styles.css');
     const jsPath = path.join(process.cwd(), 'templates', 'app.js');
-    log('generate', 'Reading templates from filesystem:', cssPath);
+    log('gen', 'Reading templates from:', cssPath);
     stylesCSS = fs.readFileSync(cssPath, 'utf-8');
     appJS = fs.readFileSync(jsPath, 'utf-8');
-    log('generate', 'Templates loaded from filesystem OK | CSS:', stylesCSS.length, 'bytes | JS:', appJS.length, 'bytes');
+    log('gen', 'Templates OK | CSS:', stylesCSS.length, 'bytes | JS:', appJS.length, 'bytes');
   } catch (fsErr) {
-    log('generate', 'Filesystem read failed:', fsErr.message, '| Falling back to GitHub raw URLs');
+    log('gen', 'Filesystem read failed:', fsErr.message, '| Falling back to GitHub');
     const baseUrl = 'https://raw.githubusercontent.com/msheppard7-wq/cylindo-demo-generator/main/templates';
     [stylesCSS, appJS] = await Promise.all([fetchRawText(`${baseUrl}/styles.css`), fetchRawText(`${baseUrl}/app.js`)]);
-    log('generate', 'Templates loaded from GitHub | CSS:', stylesCSS.length, 'bytes | JS:', appJS.length, 'bytes');
+    log('gen', 'Templates from GitHub | CSS:', stylesCSS.length, 'bytes | JS:', appJS.length, 'bytes');
   }
+
+  if (onStatusUpdate) await onStatusUpdate(':arrows_counterclockwise: Deploying to Vercel...');
 
   const slug = slugify(brandName);
   const projectName = `cylindo-demo-${slug}`;
@@ -412,9 +479,9 @@ async function generateDemo({ customerId, productCodes, curatorCode, brandName, 
     { path: 'config.json', content: JSON.stringify(config, null, 2) },
   ];
 
-  log('generate', 'Deploying to Vercel as', projectName, '| files:', files.length);
+  log('gen', 'Deploying to Vercel as', projectName, '| files:', files.length);
   const deployment = await deployToVercel(projectName, files);
-  log('generate', 'Vercel response:', deployment.status, JSON.stringify(deployment.data).substring(0, 500));
+  log('gen', 'Vercel response:', deployment.status, JSON.stringify(deployment.data).substring(0, 500));
 
   if (deployment.status !== 200 && deployment.status !== 201) {
     const errMsg = deployment.data?.error?.message || deployment.data?.error?.code || JSON.stringify(deployment.data);
@@ -422,12 +489,62 @@ async function generateDemo({ customerId, productCodes, curatorCode, brandName, 
   }
 
   let demoUrl = `https://${projectName}.vercel.app`;
-  if (deployment.data.url) {
-    demoUrl = `https://${deployment.data.url}`;
+  if (deployment.data.url) demoUrl = `https://${deployment.data.url}`;
+
+  log('gen', 'Demo URL:', demoUrl);
+  return { demoUrl, statusParts, projectName };
+}
+
+// ---- Generation with Status Tracker ----
+
+async function runGenerationWithTracker({ customerId, productCodes, curatorCode, brandName, brandUrl, userId, channelId }) {
+  const channel = channelId || DEMO_CHANNEL;
+  const trackerParams = { brandName, customerId, curatorCode, productCodes, brandUrl, userId };
+
+  // 1. Post initial "Submitted" message
+  let messageTs = null;
+  try {
+    const initResult = await slackPostMessage(channel, `Demo request: ${brandName}`,
+      buildTrackerBlocks({ ...trackerParams, status: 'Submitted', statusEmoji: ':hourglass_flowing_sand:', statusDetail: 'Your demo is queued and will begin generating shortly...' })
+    );
+    messageTs = initResult.data?.ts;
+    log('tracker', 'Initial message posted, ts:', messageTs);
+  } catch (msgErr) {
+    log('tracker', 'FAILED to post initial message:', msgErr.message);
   }
 
-  log('generate', 'Demo URL:', demoUrl);
-  return { demoUrl, statusParts, projectName };
+  // Status update callback
+  const onStatusUpdate = async (detail) => {
+    try {
+      await slackUpdateMessage(channel, messageTs, `Generating: ${brandName}`,
+        buildTrackerBlocks({ ...trackerParams, status: 'In Progress', statusEmoji: ':arrows_counterclockwise:', statusDetail: detail })
+      );
+    } catch (e) {
+      log('tracker', 'Status update failed:', e.message);
+    }
+  };
+
+  // 2. Run generation
+  try {
+    const result = await generateDemo({ customerId, productCodes, curatorCode, brandName, brandUrl, onStatusUpdate });
+
+    // 3. Final update — "Created"
+    await slackUpdateMessage(channel, messageTs, `Demo ready: ${brandName}`,
+      buildTrackerBlocks({ ...trackerParams, status: 'Created', statusEmoji: ':white_check_mark:', demoUrl: result.demoUrl, statusParts: result.statusParts })
+    );
+    log('tracker', 'Final status: Created |', result.demoUrl);
+  } catch (error) {
+    log('error', 'GENERATION FAILED:', error.message, error.stack);
+
+    // 3. Final update — "Failed"
+    try {
+      await slackUpdateMessage(channel, messageTs, `Demo failed: ${brandName}`,
+        buildTrackerBlocks({ ...trackerParams, status: 'Failed', statusEmoji: ':x:', errorMessage: error.message })
+      );
+    } catch (postErr) {
+      log('error', 'Also failed to update tracker:', postErr.message);
+    }
+  }
 }
 
 // ============================================
@@ -441,9 +558,9 @@ module.exports = async function handler(req, res) {
 
   const body = req.body;
 
-  // ---- Handle: Slash command → open modal ----
+  // ---- Slash command: /cylindo-demo ----
   if (body.command === '/cylindo-demo') {
-    // Setup sub-command: post the button message to the channel
+    // Setup sub-command: post the button to the channel
     if (body.text && body.text.trim().toLowerCase() === 'setup') {
       try {
         await postButtonMessage(body.channel_id);
@@ -459,8 +576,8 @@ module.exports = async function handler(req, res) {
       }
     }
 
+    // Default: open modal
     const triggerId = body.trigger_id;
-
     if (!triggerId) {
       return res.status(200).json({
         response_type: 'ephemeral',
@@ -468,16 +585,14 @@ module.exports = async function handler(req, res) {
       });
     }
 
-    // Open the modal FIRST, before responding (Vercel may kill the function after res.send)
     try {
       const result = await openModal(triggerId, body.channel_id);
       if (result.data && !result.data.ok) {
         return res.status(200).json({
           response_type: 'ephemeral',
-          text: `:warning: Could not open form: ${result.data.error || 'unknown error'}\n\nDebug: token starts with ${SLACK_BOT_TOKEN ? SLACK_BOT_TOKEN.substring(0, 8) : 'NOT SET'}`,
+          text: `:warning: Could not open form: ${result.data.error || 'unknown error'}`,
         });
       }
-      // Modal opened successfully — send empty 200 to acknowledge
       return res.status(200).send('');
     } catch (err) {
       return res.status(200).json({
@@ -487,7 +602,7 @@ module.exports = async function handler(req, res) {
     }
   }
 
-  // ---- Handle: Interactive payloads (button clicks + modal submissions) ----
+  // ---- Interactive payloads (button clicks + modal submissions) ----
   if (body.payload) {
     const payload = JSON.parse(body.payload);
 
@@ -498,20 +613,18 @@ module.exports = async function handler(req, res) {
         log('button', 'Create Demo button clicked by', payload.user?.name);
         try {
           await openModal(payload.trigger_id, payload.channel?.id || DEMO_CHANNEL);
-          return res.status(200).send('');
         } catch (err) {
           log('button', 'Failed to open modal:', err.message);
-          return res.status(200).send('');
         }
+        return res.status(200).send('');
       }
-      // Unknown action — just acknowledge
       return res.status(200).send('');
     }
 
+    // Modal submission → close modal, run generation via waitUntil
     if (payload.type === 'view_submission' && payload.view.callback_id === 'cylindo_demo_submit') {
       const values = payload.view.state.values;
       const userId = payload.user.id;
-      const userName = payload.user.name || payload.user.username || 'someone';
 
       const customerId = values.customer_id.value.value.trim();
       const productCodesRaw = values.product_codes.value.value.trim();
@@ -519,97 +632,31 @@ module.exports = async function handler(req, res) {
       const brandName = values.brand_name.value.value.trim();
       const brandUrl = values.brand_url?.value?.value?.trim() || '';
 
-      // Get the channel from private_metadata
-      let channelId = null;
+      let channelId = DEMO_CHANNEL;
       try {
         const meta = JSON.parse(payload.view.private_metadata || '{}');
-        channelId = meta.channel_id;
+        if (meta.channel_id) channelId = meta.channel_id;
       } catch {}
 
       const productCodes = productCodesRaw.split(',').map((p) => p.trim()).filter(Boolean);
 
-      // Fire generation as a SEPARATE function invocation via /api/generate
-      log('submit', 'Firing generation request to /api/generate for', brandName);
-      const host = req.headers['x-forwarded-host'] || req.headers.host || 'cylindo-demo-generator.vercel.app';
-      const generatePayload = JSON.stringify({
-        customerId, productCodes, curatorCode, brandName, brandUrl, userId,
-      });
+      log('submit', 'Modal submitted by', payload.user?.name, '| brand:', brandName, '| products:', productCodes.join(', '));
 
-      const genReq = https.request({
-        hostname: host,
-        path: '/api/generate',
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Content-Length': Buffer.byteLength(generatePayload),
-        },
-      }, (genRes) => {
-        let d = '';
-        genRes.on('data', (c) => d += c);
-        genRes.on('end', () => log('submit', 'Generate response:', genRes.statusCode, d.substring(0, 200)));
-      });
-      genReq.on('error', (err) => log('submit', 'Failed to fire generation request:', err.message));
-      genReq.write(generatePayload);
-      genReq.end();
+      // Use waitUntil to keep function alive AFTER we respond
+      waitUntil(
+        runGenerationWithTracker({
+          customerId, productCodes, curatorCode, brandName, brandUrl, userId, channelId,
+        })
+      );
 
-      // Close the modal immediately — generation runs in the separate request above
-      return res.status(200).json({
-        response_action: 'update',
-        view: {
-          type: 'modal',
-          title: { type: 'plain_text', text: 'Generating...' },
-          blocks: [
-            {
-              type: 'section',
-              text: { type: 'mrkdwn', text: `:hourglass_flowing_sand: *Generating demo for ${brandName}...*\n\nCheck <#${DEMO_CHANNEL}> for progress and the result.` },
-            },
-          ],
-        },
-      });
+      // Close the modal immediately — generation runs via waitUntil above
+      return res.status(200).json({ response_action: 'clear' });
     }
 
-    // Other interactive payloads — just acknowledge
     return res.status(200).send('');
   }
 
-  // ---- Fallback: old-style text command still works ----
-  if (body.text && body.text.trim()) {
-    const parsed = parseSlackText(body.text);
-    if (parsed) {
-      res.status(200).json({
-        response_type: 'in_channel',
-        text: `:hourglass_flowing_sand: *Generating demo for ${parsed.brand}...*\nRequested by @${body.user_name}\n\n:satellite: Fetching product data from Cylindo Content API...`,
-      });
-
-      try {
-        const result = await generateDemo({
-          customerId: parsed.customer,
-          productCodes: parsed.products,
-          curatorCode: parsed.curator,
-          brandName: parsed.brand,
-          brandUrl: '',
-        });
-
-        await httpRequest(body.response_url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-        }, JSON.stringify({
-          response_type: 'in_channel',
-          blocks: [
-            { type: 'header', text: { type: 'plain_text', text: `✅ Demo Ready: ${parsed.brand}` } },
-            { type: 'section', text: { type: 'mrkdwn', text: [...result.statusParts, '', `:rocket: *Demo URL:* <${result.demoUrl}|${result.demoUrl}>`].join('\n') } },
-          ],
-        }));
-      } catch (error) {
-        await httpRequest(body.response_url, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-        }, JSON.stringify({ response_type: 'ephemeral', text: `:x: Error: ${error.message}` }));
-      }
-      return;
-    }
-  }
-
-  // No text = open modal (default behavior)
+  // ---- Fallback ----
   if (body.trigger_id) {
     try {
       await openModal(body.trigger_id);
@@ -621,18 +668,3 @@ module.exports = async function handler(req, res) {
 
   res.status(200).json({ response_type: 'ephemeral', text: 'Type `/cylindo-demo` to open the demo generator form.' });
 };
-
-// ---- Old-style text parser (backwards compatible) ----
-function parseSlackText(text) {
-  const parts = [];
-  let current = '';
-  let inQuotes = false;
-  for (const char of text) {
-    if (char === '"') { inQuotes = !inQuotes; }
-    else if (char === ' ' && !inQuotes) { if (current) parts.push(current); current = ''; }
-    else { current += char; }
-  }
-  if (current) parts.push(current);
-  if (parts.length < 3) return null;
-  return { customer: parts[0], products: parts[1].split(',').map((p) => p.trim()), curator: parts[2], brand: parts[3] || 'Demo' };
-}
