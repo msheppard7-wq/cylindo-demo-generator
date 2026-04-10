@@ -130,29 +130,84 @@ function applyTheme() {
   set('--announcement-text', t.colorAnnouncementText);
   set('--header-bg', t.colorHeaderBg);
   set('--header-border', t.colorHeaderBorder);
+  set('--header-dark-bg', t.colorHeaderDarkBg);
+  set('--header-dark-border', t.colorHeaderDarkBorder);
+  set('--header-dark-text', t.colorHeaderDarkText);
+  set('--header-dark-muted', t.colorHeaderDarkMuted);
+  set('--nav-sale-accent', t.colorNavSaleAccent);
+  if (t.headerStickyOffset) set('--header-sticky-offset', t.headerStickyOffset);
+}
+
+function buildLogoMarkup(brand) {
+  if (brand.logoImageUrl) {
+    if (brand.logoImageUrlDark) {
+      return `<picture class="logo-picture"><source srcset="${brand.logoImageUrlDark}" media="(prefers-color-scheme: dark)" /><img src="${brand.logoImageUrl}" alt="${brand.name}" class="logo-image" /></picture>`;
+    }
+    return `<img src="${brand.logoImageUrl}" alt="${brand.name}" class="logo-image" />`;
+  }
+  return '';
 }
 
 function renderBrand() {
   applyTheme();
   const { brand } = config;
-  const announcement = document.getElementById('announcement-bar');
-  if (announcement) announcement.textContent = brand.announcementText;
+  const darkRetail = brand.headerVariant === 'dark-retail';
 
-  const logo = document.getElementById('logo');
-  if (brand.logoImageUrl) {
-    if (brand.logoImageUrlDark) {
-      logo.innerHTML = `<picture class="logo-picture"><source srcset="${brand.logoImageUrlDark}" media="(prefers-color-scheme: dark)" /><img src="${brand.logoImageUrl}" alt="${brand.name}" class="logo-image" /></picture>`;
-    } else {
-      logo.innerHTML = `<img src="${brand.logoImageUrl}" alt="${brand.name}" class="logo-image" />`;
-    }
-  } else {
-    logo.textContent = brand.logoText;
+  document.documentElement.classList.toggle('header-variant-dark-retail', darkRetail);
+
+  const annBlock = document.getElementById('header-announcement-block');
+  const defWrap = document.getElementById('header-default-wrap');
+  const drWrap = document.getElementById('header-dark-retail-wrap');
+  const hasAnnouncement = !!(brand.announcementText && String(brand.announcementText).trim());
+
+  if (annBlock) annBlock.hidden = darkRetail || !hasAnnouncement;
+  if (defWrap) defWrap.hidden = darkRetail;
+  if (drWrap) drWrap.hidden = !darkRetail;
+
+  const announcement = document.getElementById('announcement-bar');
+  if (announcement) announcement.textContent = brand.announcementText || '';
+
+  const logoDefault = document.getElementById('logo-default');
+  const logoDr = document.getElementById('logo-dark-retail');
+  const logoMarkup = buildLogoMarkup(brand);
+  [logoDefault, logoDr].forEach((logo) => {
+    if (!logo) return;
+    if (logoMarkup) logo.innerHTML = logoMarkup;
+    else logo.textContent = brand.logoText || brand.name;
+  });
+
+  const subline = document.getElementById('logo-subline');
+  if (subline) {
+    subline.textContent = brand.logoSubline || '';
+    subline.style.display = brand.logoSubline ? '' : 'none';
   }
 
-  const nav = document.getElementById('main-nav');
-  nav.innerHTML = brand.navLinks.map(link =>
-    `<a href="#"${link === brand.navHighlight ? ' class="nav-highlight"' : ''}>${link}</a>`
-  ).join('');
+  const searchInput = document.getElementById('hdr-search-input');
+  if (searchInput) searchInput.placeholder = brand.searchPlaceholder || 'Search';
+
+  const navDefault = document.getElementById('main-nav');
+  if (navDefault) {
+    navDefault.innerHTML = (brand.navLinks || []).map((link) =>
+      `<a href="#"${link === brand.navHighlight ? ' class="nav-highlight"' : ''}>${link}</a>`
+    ).join('');
+  }
+
+  const navDr = document.getElementById('main-nav-dark-retail');
+  if (navDr) {
+    navDr.innerHTML = (brand.navLinks || []).map((link) =>
+      `<a href="#"${link === brand.navHighlight ? ' class="nav-highlight"' : ''}>${link}</a>`
+    ).join('');
+  }
+
+  const navSec = document.getElementById('nav-secondary-dark-retail');
+  if (navSec) {
+    const right = brand.navLinksRight || [];
+    navSec.innerHTML = right.map((item) => {
+      const label = typeof item === 'string' ? item : item.label;
+      const accent = typeof item === 'object' && item.accent;
+      return `<a href="#" class="${accent ? 'nav-sale-accent' : ''}">${label}</a>`;
+    }).join('');
+  }
 
   const footerGrid = document.getElementById('footer-grid');
   footerGrid.innerHTML = brand.footerColumns.map(col => {
@@ -401,15 +456,16 @@ function bindInteractions() {
     });
   }
 
-  // Add to Cart
+  // Add to Cart (update every cart badge — default header + dark-retail header)
   const addToCartBtn = document.querySelector('.add-to-cart-btn');
-  const cartCount = document.querySelector('.cart-count');
+  const cartCountEls = document.querySelectorAll('.cart-count');
 
-  if (addToCartBtn) {
+  if (addToCartBtn && cartCountEls.length) {
     addToCartBtn.addEventListener('click', () => {
       const qty = parseInt(qtyInput.value) || 1;
-      const current = parseInt(cartCount.textContent) || 0;
-      cartCount.textContent = current + qty;
+      const current = parseInt(cartCountEls[0].textContent, 10) || 0;
+      const next = String(current + qty);
+      cartCountEls.forEach((el) => { el.textContent = next; });
       addToCartBtn.textContent = 'Added!';
       addToCartBtn.classList.add('added-state');
       setTimeout(() => {

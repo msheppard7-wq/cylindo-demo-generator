@@ -13,28 +13,75 @@
 </head>
 <body>
 
-  <header class="site-header">
-    <div class="header-announcement">
-      <div class="header-announcement-inner container" id="announcement-bar"></div>
+  <header class="site-header" id="site-header">
+    <div class="header-announcement" id="header-announcement-block">
+      <div class="container header-announcement-inner" id="announcement-bar"></div>
     </div>
-    <div class="header-main">
-      <div class="header-main-inner container">
-        <button class="menu-btn" type="button" aria-label="Open menu">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-        </button>
-        <a href="#" class="logo" id="logo"></a>
-        <nav class="main-nav" id="main-nav" aria-label="Primary"></nav>
-        <div class="header-actions">
-          <a href="#" class="header-icon-link" aria-label="Search">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          </a>
-          <a href="#" class="header-icon-link" aria-label="Account">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-          </a>
-          <a href="#" class="header-icon-link cart-link" aria-label="Shopping cart">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-            <span class="cart-count">0</span>
-          </a>
+
+    <!-- Default (light) single-bar header -->
+    <div class="header-default-wrap" id="header-default-wrap">
+      <div class="header-main">
+        <div class="header-main-inner container">
+          <button class="menu-btn menu-btn--default" type="button" aria-label="Open menu">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
+          <a href="#" class="logo" id="logo-default"></a>
+          <nav class="main-nav" id="main-nav" aria-label="Primary"></nav>
+          <div class="header-actions">
+            <a href="#" class="header-icon-link" aria-label="Search">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            </a>
+            <a href="#" class="header-icon-link" aria-label="Account">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </a>
+            <a href="#" class="header-icon-link cart-link" aria-label="Shopping cart">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+              <span class="cart-count">0</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dark retail 3-tier header (e.g. Haverty’s) -->
+    <div class="header-dark-retail-wrap" id="header-dark-retail-wrap" hidden>
+      <div class="hdr-dr-top">
+        <div class="container hdr-dr-top-inner">
+          <button class="menu-btn menu-btn--dr" type="button" aria-label="Open menu">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
+          <div class="hdr-dr-brand">
+            <a href="#" class="logo logo--dark-retail" id="logo-dark-retail"></a>
+            <p class="logo-subline" id="logo-subline"></p>
+          </div>
+          <div class="hdr-dr-utilities">
+            <a href="#" class="hdr-dr-util">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              Select Store
+            </a>
+            <a href="#" class="hdr-dr-util">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+              My Account
+            </a>
+            <a href="#" class="hdr-dr-util cart-link cart-link--dr" aria-label="Shopping cart">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+              Cart (<span class="cart-count">0</span>)
+            </a>
+          </div>
+        </div>
+      </div>
+      <div class="hdr-dr-search">
+        <div class="container">
+          <div class="hdr-dr-search-inner" role="search">
+            <svg class="hdr-dr-search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="search" class="hdr-dr-search-input" id="hdr-search-input" placeholder="Search" autocomplete="off" />
+          </div>
+        </div>
+      </div>
+      <div class="hdr-dr-nav">
+        <div class="container hdr-dr-nav-flex">
+          <nav class="hdr-dr-main-nav" id="main-nav-dark-retail" aria-label="Primary"></nav>
+          <nav class="hdr-dr-secondary-nav" id="nav-secondary-dark-retail" aria-label="Promotions"></nav>
         </div>
       </div>
     </div>

@@ -311,7 +311,77 @@ function slugify(text) {
 
 // ---- Site Builder ----
 
+/** When the brand name matches a known retail site, apply header + theme preset (layout only; no scraping). */
+function brandPresetForName(brandName) {
+  const n = (brandName || '').toLowerCase().replace(/\u2019/g, "'");
+  if (!n.includes('haverty')) return null;
+  return {
+    logoText: 'HAVERTYS',
+    logoSubline: 'FURNITURE \u00b7 EST 1885',
+    headerVariant: 'dark-retail',
+    announcementText: '',
+    searchPlaceholder: 'Search',
+    navLinks: [
+      'LIVING', 'BEDROOM', 'DINING', 'MATTRESSES', 'OFFICE', 'DECOR',
+      'FREE DESIGN SERVICE', 'FINANCING', 'REGRET-FREE GUARANTEE',
+    ],
+    navLinksRight: [
+      { label: 'SALE', accent: true },
+      { label: 'Spring Style Event', accent: false },
+    ],
+    navHighlight: 'LIVING',
+    theme: {
+      fontHeading: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+      fontBody: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+      colorBg: '#ffffff',
+      colorBgAlt: '#f7f7f6',
+      colorText: '#2c3138',
+      colorTextSecondary: '#5a6169',
+      colorAccent: '#2c3138',
+      colorAccentHover: '#1a1e23',
+      colorBorder: '#d9d9d9',
+      colorSuccess: '#4a5d4a',
+      colorAnnouncementBg: '#f5f5f5',
+      colorAnnouncementText: '#333333',
+      colorHeaderBg: '#ffffff',
+      colorHeaderBorder: '#e8e8e8',
+      colorHeaderDarkBg: '#2c3138',
+      colorHeaderDarkBorder: '#3d444d',
+      colorHeaderDarkText: '#ffffff',
+      colorHeaderDarkMuted: 'rgba(255, 255, 255, 0.72)',
+      colorNavSaleAccent: '#c9a86a',
+      headerStickyOffset: '214px',
+    },
+  };
+}
+
 function buildConfig(customerId, curatorCode, brandName, brandUrl, products) {
+  const preset = brandPresetForName(brandName) || {};
+  const presetTheme = preset.theme || {};
+  const { theme: _t, ...presetRest } = preset;
+  const theme = {
+    fontHeading: "'Libre Baskerville', 'Georgia', serif",
+    fontBody: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+    colorBg: '#ffffff',
+    colorBgAlt: '#f7f5f0',
+    colorText: '#2c3e50',
+    colorTextSecondary: '#7a8a8e',
+    colorAccent: '#2c5f7c',
+    colorAccentHover: '#1e4a61',
+    colorBorder: '#ddd8ce',
+    colorSuccess: '#5a7c65',
+    colorAnnouncementBg: '#f5f5f5',
+    colorAnnouncementText: '#333333',
+    colorHeaderBg: '#ffffff',
+    colorHeaderBorder: '#e8e8e8',
+    colorHeaderDarkBg: '#2c3138',
+    colorHeaderDarkBorder: '#3d444d',
+    colorHeaderDarkText: '#ffffff',
+    colorHeaderDarkMuted: 'rgba(255, 255, 255, 0.72)',
+    colorNavSaleAccent: '#c9a86a',
+    ...presetTheme,
+  };
+
   return {
     brand: {
       name: brandName,
@@ -321,21 +391,18 @@ function buildConfig(customerId, curatorCode, brandName, brandUrl, products) {
       announcementText: `Cylindo 3D Product Visualization Demo \u2014 ${brandName}`,
       navLinks: ['Living', 'Bedroom', 'Dining', 'Outdoor', 'Sale'],
       navHighlight: 'Living',
+      navLinksRight: [],
+      headerVariant: undefined,
+      logoSubline: '',
+      searchPlaceholder: 'Search',
       footerCopyright: `${brandName} \u2014 Cylindo Demo`,
       footerColumns: [
         { title: 'Customer Care', links: ['Contact Us', 'Shipping & Returns', 'FAQ', 'Design Services'] },
         { title: 'About', links: ['Our Story', 'Design Philosophy', 'Sustainability', 'Careers'] },
         { title: 'Explore', links: ['New Arrivals', 'Best Sellers', 'Collections', 'Inspiration'] },
       ],
-      theme: {
-        fontHeading: "'Libre Baskerville', 'Georgia', serif",
-        fontBody: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-        colorBg: '#ffffff', colorBgAlt: '#f7f5f0', colorText: '#2c3e50',
-        colorTextSecondary: '#7a8a8e', colorAccent: '#2c5f7c',
-        colorAccentHover: '#1e4a61', colorBorder: '#ddd8ce', colorSuccess: '#5a7c65',
-        colorAnnouncementBg: '#f5f5f5', colorAnnouncementText: '#333333',
-        colorHeaderBg: '#ffffff', colorHeaderBorder: '#e8e8e8',
-      },
+      ...presetRest,
+      theme,
     },
     cylindo: { customerId, remoteConfig: curatorCode },
     products,
@@ -371,48 +438,21 @@ function buildProduct(productCode, features) {
   };
 }
 
-// ---- Inlined HTML Template ----
+// ---- HTML template (keep in sync with templates/index.html) ----
 
 function getIndexHTML() {
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Cylindo Demo</title>
-  <link rel="preconnect" href="https://content.cylindo.com" crossorigin />
-  <script type="module" src="https://viewer-cdn.cylindo.com/v1/index.mjs" async><\/script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-  <header class="site-header">
-    <div class="header-announcement"><div class="header-announcement-inner" id="announcement-bar"></div></div>
-    <div class="header-main"><div class="header-main-inner">
-      <button class="menu-btn" type="button" aria-label="Menu"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
-      <a href="#" class="logo" id="logo"></a>
-      <div class="header-actions">
-        <a href="#" aria-label="Search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg></a>
-        <a href="#" aria-label="Account"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></a>
-        <a href="#" aria-label="Cart"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg></a>
-      </div>
-    </div></div>
-    <div class="main-nav-wrap"><nav class="main-nav" id="main-nav"></nav></div>
-  </header>
-  <div class="product-switcher" id="product-switcher"></div>
-  <div class="breadcrumb"><div class="container" id="breadcrumb"></div></div>
-  <main class="product-section"><div class="container product-grid"><div class="product-media"><div class="curator-meta" id="curator-meta"></div><div class="cylindo-wrapper" id="cylindo-container"></div><button class="tearsheet-btn" id="tearsheet-btn" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg> Download Tear Sheet</button></div><div class="product-info" id="product-info"></div></div></main>
-  <section class="features-section"><div class="container"><h2 class="section-title">What Makes It Special</h2><div class="features-grid" id="features-grid"></div></div></section>
-  <section class="specs-section"><div class="container"><h2 class="section-title">Specifications</h2><div class="specs-grid" id="specs-grid"></div></div></section>
-  <section class="faq-section"><div class="container"><h2 class="section-title">Frequently Asked Questions</h2><div class="faq-list" id="faq-list"></div></div></section>
-  <section class="cylindo-banner"><div class="container"><div class="cylindo-badge-large"><span class="powered-by">3D Product Visualization Powered by</span><span class="cylindo-brand">Cylindo</span></div><p>This demo showcases how Cylindo's interactive 3D viewer integrates seamlessly into a branded product page.</p></div></section>
-  <footer class="site-footer"><div class="container footer-grid" id="footer-grid"></div><div class="footer-bottom"><p id="footer-copyright"></p></div></footer>
-  <div class="tearsheet-overlay" id="tearsheet-overlay"><div class="tearsheet-modal" id="tearsheet-modal"><button class="tearsheet-close" id="tearsheet-close" type="button">&times;</button><div class="tearsheet-actions"><button class="tearsheet-print-btn" id="tearsheet-print-btn" type="button"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg> Print / Save as PDF</button></div><div class="tearsheet-content" id="tearsheet-content"></div></div></div>
-  <script src="app.js"><\/script>
-</body>
-</html>`;
+  const fs = require('fs');
+  const path = require('path');
+  const candidates = [
+    path.join(process.cwd(), 'templates', 'index.html'),
+    path.join(__dirname, '..', 'templates', 'index.html'),
+  ];
+  for (const p of candidates) {
+    try {
+      if (fs.existsSync(p)) return fs.readFileSync(p, 'utf-8');
+    } catch (_) {}
+  }
+  throw new Error('templates/index.html not found for deployment');
 }
 
 // ---- Vercel Deployment ----

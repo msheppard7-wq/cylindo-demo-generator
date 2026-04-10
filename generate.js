@@ -179,37 +179,96 @@ function productIdFromCode(code) {
 
 // ---- Brand Defaults (can be enhanced with scraping in Phase 2) ----
 
-function getBrandConfig(brandName, websiteUrl) {
+function brandPresetForName(brandName) {
+  const n = (brandName || '').toLowerCase().replace(/\u2019/g, "'");
+  if (!n.includes('haverty')) return null;
   return {
-    name: brandName || 'Demo Brand',
-    logoText: brandName || 'Demo Brand',
+    logoText: 'HAVERTYS',
+    logoSubline: 'FURNITURE · EST 1885',
+    headerVariant: 'dark-retail',
+    announcementText: '',
+    searchPlaceholder: 'Search',
+    navLinks: [
+      'LIVING', 'BEDROOM', 'DINING', 'MATTRESSES', 'OFFICE', 'DECOR',
+      'FREE DESIGN SERVICE', 'FINANCING', 'REGRET-FREE GUARANTEE'
+    ],
+    navLinksRight: [
+      { label: 'SALE', accent: true },
+      { label: 'Spring Style Event', accent: false }
+    ],
+    navHighlight: 'LIVING',
+    theme: {
+      fontHeading: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+      fontBody: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+      colorBg: '#ffffff',
+      colorBgAlt: '#f7f7f6',
+      colorText: '#2c3138',
+      colorTextSecondary: '#5a6169',
+      colorAccent: '#2c3138',
+      colorAccentHover: '#1a1e23',
+      colorBorder: '#d9d9d9',
+      colorSuccess: '#4a5d4a',
+      colorAnnouncementBg: '#f5f5f5',
+      colorAnnouncementText: '#333333',
+      colorHeaderBg: '#ffffff',
+      colorHeaderBorder: '#e8e8e8',
+      colorHeaderDarkBg: '#2c3138',
+      colorHeaderDarkBorder: '#3d444d',
+      colorHeaderDarkText: '#ffffff',
+      colorHeaderDarkMuted: 'rgba(255, 255, 255, 0.72)',
+      colorNavSaleAccent: '#c9a86a',
+      headerStickyOffset: '214px'
+    }
+  };
+}
+
+function getBrandConfig(brandName, websiteUrl) {
+  const name = brandName || 'Demo Brand';
+  const preset = brandPresetForName(name) || {};
+  const presetTheme = preset.theme || {};
+  const { theme: _pt, ...presetRest } = preset;
+  const theme = {
+    fontHeading: "'Libre Baskerville', 'Georgia', serif",
+    fontBody: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+    colorBg: '#ffffff',
+    colorBgAlt: '#f7f5f0',
+    colorText: '#2c3e50',
+    colorTextSecondary: '#7a8a8e',
+    colorAccent: '#2c5f7c',
+    colorAccentHover: '#1e4a61',
+    colorBorder: '#ddd8ce',
+    colorSuccess: '#5a7c65',
+    colorAnnouncementBg: '#f5f5f5',
+    colorAnnouncementText: '#333333',
+    colorHeaderBg: '#ffffff',
+    colorHeaderBorder: '#e8e8e8',
+    colorHeaderDarkBg: '#2c3138',
+    colorHeaderDarkBorder: '#3d444d',
+    colorHeaderDarkText: '#ffffff',
+    colorHeaderDarkMuted: 'rgba(255, 255, 255, 0.72)',
+    colorNavSaleAccent: '#c9a86a',
+    ...presetTheme
+  };
+  return {
+    name,
+    logoText: name,
     tagline: 'Cylindo 3D Product Visualization Demo',
     website: websiteUrl || '#',
-    announcementText: `Cylindo 3D Product Visualization Demo — ${brandName || 'Demo'}`,
+    announcementText: `Cylindo 3D Product Visualization Demo — ${name}`,
     navLinks: ['Living', 'Bedroom', 'Dining', 'Outdoor', 'Sale'],
     navHighlight: 'Living',
-    footerCopyright: `${brandName || 'Demo'} — Cylindo Demo`,
+    navLinksRight: [],
+    headerVariant: undefined,
+    logoSubline: '',
+    searchPlaceholder: 'Search',
+    footerCopyright: `${name} — Cylindo Demo`,
     footerColumns: [
       { title: 'Customer Care', links: ['Contact Us', 'Shipping & Returns', 'FAQ', 'Design Services'] },
       { title: 'About', links: ['Our Story', 'Design Philosophy', 'Sustainability', 'Careers'] },
       { title: 'Explore', links: ['New Arrivals', 'Best Sellers', 'Collections', 'Inspiration'] }
     ],
-    theme: {
-      fontHeading: "'Libre Baskerville', 'Georgia', serif",
-      fontBody: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-      colorBg: '#ffffff',
-      colorBgAlt: '#f7f5f0',
-      colorText: '#2c3e50',
-      colorTextSecondary: '#7a8a8e',
-      colorAccent: '#2c5f7c',
-      colorAccentHover: '#1e4a61',
-      colorBorder: '#ddd8ce',
-      colorSuccess: '#5a7c65',
-      colorAnnouncementBg: '#f5f5f5',
-      colorAnnouncementText: '#333333',
-      colorHeaderBg: '#ffffff',
-      colorHeaderBorder: '#e8e8e8'
-    }
+    ...presetRest,
+    theme
   };
 }
 
