@@ -13,57 +13,53 @@
 </head>
 <body>
 
-  <!-- Announcement Bar -->
-  <div class="announcement-bar" id="announcement-bar"></div>
-
-  <!-- Header -->
   <header class="site-header">
-    <div class="header-inner">
-      <a href="#" class="logo" id="logo"></a>
-      <nav class="main-nav" id="main-nav"></nav>
-      <div class="header-actions">
-        <button class="icon-btn" aria-label="Search">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+    <div class="header-announcement">
+      <div class="header-announcement-inner container" id="announcement-bar"></div>
+    </div>
+    <div class="header-main">
+      <div class="header-main-inner container">
+        <button class="menu-btn" type="button" aria-label="Open menu">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
         </button>
-        <button class="icon-btn" aria-label="Account">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        </button>
-        <button class="icon-btn cart-btn" aria-label="Cart">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
-          <span class="cart-count">0</span>
-        </button>
+        <a href="#" class="logo" id="logo"></a>
+        <nav class="main-nav" id="main-nav" aria-label="Primary"></nav>
+        <div class="header-actions">
+          <a href="#" class="header-icon-link" aria-label="Search">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </a>
+          <a href="#" class="header-icon-link" aria-label="Account">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </a>
+          <a href="#" class="header-icon-link cart-link" aria-label="Shopping cart">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+            <span class="cart-count">0</span>
+          </a>
+        </div>
       </div>
     </div>
   </header>
 
-  <!-- Product Switcher -->
   <div class="product-switcher" id="product-switcher"></div>
 
-  <!-- Breadcrumb -->
   <div class="breadcrumb">
     <div class="container" id="breadcrumb"></div>
   </div>
 
-  <!-- Main Product Section -->
   <main class="product-section">
     <div class="container product-grid">
-
-      <!-- Left: Cylindo 3D Viewer -->
       <div class="product-media">
+        <div class="curator-meta" id="curator-meta"></div>
         <div class="cylindo-wrapper" id="cylindo-container"></div>
-        <!-- Tear Sheet Download Button -->
         <button class="tearsheet-btn" id="tearsheet-btn" type="button">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg>
           <span>Download Tear Sheet</span>
         </button>
       </div>
-
-      <!-- Right: Product Info -->
       <div class="product-info" id="product-info"></div>
     </div>
   </main>
 
-  <!-- Feature Highlights -->
   <section class="features-section">
     <div class="container">
       <h2 class="section-title">What Makes It Special</h2>
@@ -71,7 +67,6 @@
     </div>
   </section>
 
-  <!-- Specifications -->
   <section class="specs-section">
     <div class="container">
       <h2 class="section-title">Specifications</h2>
@@ -79,7 +74,6 @@
     </div>
   </section>
 
-  <!-- FAQ Section -->
   <section class="faq-section">
     <div class="container">
       <h2 class="section-title">Frequently Asked Questions</h2>
@@ -87,7 +81,6 @@
     </div>
   </section>
 
-  <!-- Cylindo Powered Banner -->
   <section class="cylindo-banner">
     <div class="container">
       <div class="cylindo-badge-large">
@@ -98,7 +91,6 @@
     </div>
   </section>
 
-  <!-- Footer -->
   <footer class="site-footer">
     <div class="container footer-grid" id="footer-grid"></div>
     <div class="footer-bottom">
@@ -106,7 +98,6 @@
     </div>
   </footer>
 
-  <!-- Tear Sheet Modal (hidden, used for PDF generation) -->
   <div class="tearsheet-overlay" id="tearsheet-overlay">
     <div class="tearsheet-modal" id="tearsheet-modal">
       <button class="tearsheet-close" id="tearsheet-close" type="button">&times;</button>

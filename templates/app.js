@@ -109,7 +109,31 @@ function updateURL() {
 
 // ---- Render Brand (one-time) ----
 
+function applyTheme() {
+  const t = config.brand.theme;
+  if (!t) return;
+  const r = document.documentElement;
+  const set = (prop, val) => {
+    if (val != null && val !== '') r.style.setProperty(prop, val);
+  };
+  set('--font-heading', t.fontHeading);
+  set('--font-body', t.fontBody);
+  set('--color-bg', t.colorBg);
+  set('--color-bg-alt', t.colorBgAlt);
+  set('--color-text', t.colorText);
+  set('--color-text-secondary', t.colorTextSecondary);
+  set('--color-accent', t.colorAccent);
+  set('--color-accent-hover', t.colorAccentHover);
+  set('--color-border', t.colorBorder);
+  set('--color-success', t.colorSuccess);
+  set('--announcement-bg', t.colorAnnouncementBg);
+  set('--announcement-text', t.colorAnnouncementText);
+  set('--header-bg', t.colorHeaderBg);
+  set('--header-border', t.colorHeaderBorder);
+}
+
 function renderBrand() {
+  applyTheme();
   const { brand } = config;
   const announcement = document.getElementById('announcement-bar');
   if (announcement) announcement.textContent = brand.announcementText;
@@ -230,16 +254,19 @@ function renderProduct() {
   // Badges
   const badgesHTML = product.badges.map(b => `<span class="badge badge-${b.type}">${b.text}</span>`).join('');
 
-  // Feature options
-  let optionsHTML = '';
+  // Configurator options (reference PDP: label + selected value row, circular swatches)
+  let optionsHTML = '<div class="configurator-block">';
   product.features.forEach(feature => {
     const firstOption = feature.options[0];
     optionsHTML += `
       <div class="option-group">
-        <label class="option-label">${feature.label}: <span class="feature-selected" data-feature="${feature.code}">${firstOption.name}</span></label>
+        <div class="option-label-row">
+          <span class="option-label">${feature.label}</span>
+          <span class="option-value-label feature-selected" data-feature="${feature.code}">${firstOption.name}</span>
+        </div>
         <div class="fabric-options" data-feature-code="${feature.code}">
           ${feature.options.map((opt, i) =>
-            `<button class="fabric-btn${i === 0 ? ' active' : ''}" data-value="${opt.value}" data-name="${opt.name}" aria-label="${feature.label}: ${opt.name}" title="${opt.name}">
+            `<button type="button" class="fabric-btn${i === 0 ? ' active' : ''}" data-value="${opt.value}" data-name="${opt.name}" aria-label="${feature.label}: ${opt.name}" title="${opt.name}">
               <img src="${getSwatchUrl(product.code, feature.code, opt.value, 200)}" alt="${opt.name}" loading="lazy" onerror="this.style.display='none'; this.parentElement.classList.add('fallback')">
             </button>`
           ).join('')}
@@ -247,12 +274,12 @@ function renderProduct() {
       </div>
     `;
   });
+  optionsHTML += '</div>';
 
-  // Product Info
+  // Product Info (title → price → social proof → description → configurator — common reference order)
   document.getElementById('product-info').innerHTML = `
     <div class="product-badges">${badgesHTML}</div>
     <h1 class="product-title">${product.name}</h1>
-    <p class="product-description">${product.description}</p>
     <div class="product-price">
       <span class="price-current">${product.price}</span>
       <span class="price-note">${product.priceNote}</span>
@@ -261,6 +288,7 @@ function renderProduct() {
       <div class="stars">${starsHTML}</div>
       <span class="rating-count">${product.rating} (${product.reviewCount} reviews)</span>
     </div>
+    <p class="product-description">${product.description}</p>
     <hr class="divider">
     ${optionsHTML}
     <div class="purchase-row">
@@ -383,8 +411,11 @@ function bindInteractions() {
       const current = parseInt(cartCount.textContent) || 0;
       cartCount.textContent = current + qty;
       addToCartBtn.textContent = 'Added!';
-      addToCartBtn.style.background = '#5a7c65';
-      setTimeout(() => { addToCartBtn.textContent = 'Add to Cart'; addToCartBtn.style.background = ''; }, 1500);
+      addToCartBtn.classList.add('added-state');
+      setTimeout(() => {
+        addToCartBtn.textContent = 'Add to Cart';
+        addToCartBtn.classList.remove('added-state');
+      }, 1500);
     });
   }
 

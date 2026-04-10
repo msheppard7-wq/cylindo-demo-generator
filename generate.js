@@ -204,7 +204,11 @@ function getBrandConfig(brandName, websiteUrl) {
       colorAccent: '#2c5f7c',
       colorAccentHover: '#1e4a61',
       colorBorder: '#ddd8ce',
-      colorSuccess: '#5a7c65'
+      colorSuccess: '#5a7c65',
+      colorAnnouncementBg: '#f5f5f5',
+      colorAnnouncementText: '#333333',
+      colorHeaderBg: '#ffffff',
+      colorHeaderBorder: '#e8e8e8'
     }
   };
 }
