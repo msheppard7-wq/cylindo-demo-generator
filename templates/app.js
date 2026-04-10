@@ -59,6 +59,25 @@ function getPlaceholderUrl(productCode) {
   return `${CONTENT_API}/${config.cylindo.customerId}/products/${encodeURIComponent(productCode)}/default/${config.cylindo.remoteConfig}/placeholder.webp?size=768`;
 }
 
+function applyViewerAspectRatio(productCode) {
+  const container = document.getElementById('cylindo-container');
+  if (!container) return;
+
+  const fallbackRatio = '1 / 1';
+  container.style.aspectRatio = fallbackRatio;
+
+  const probe = new Image();
+  probe.onload = () => {
+    if (probe.naturalWidth > 0 && probe.naturalHeight > 0) {
+      container.style.aspectRatio = `${probe.naturalWidth} / ${probe.naturalHeight}`;
+    }
+  };
+  probe.onerror = () => {
+    container.style.aspectRatio = fallbackRatio;
+  };
+  probe.src = getPlaceholderUrl(productCode);
+}
+
 function formatDate() {
   return new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 }
@@ -155,6 +174,7 @@ function renderProductSwitcher() {
 function renderProduct() {
   const product = config.products[currentProductIndex];
   const { cylindo } = config;
+  applyViewerAspectRatio(product.code);
 
   // Reset current features to defaults
   currentFeatures = {};

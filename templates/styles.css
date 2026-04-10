@@ -275,7 +275,8 @@ body {
 
 .cylindo-wrapper {
   width: 100%;
-  aspect-ratio: 1 / 1;
+  aspect-ratio: auto;
+  min-height: 420px;
   background: #fff;
   border: none;
   border-radius: 0;
@@ -968,6 +969,7 @@ body {
 @media (max-width: 768px) {
   .product-grid { grid-template-columns: 1fr; gap: 32px; }
   .product-media { position: relative; top: 0; }
+  .cylindo-wrapper { min-height: 280px; }
   .main-nav { display: none; }
   .product-title { font-size: 26px; }
   .price-current { font-size: 22px; }
