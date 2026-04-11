@@ -462,10 +462,11 @@ async function slackPostMessage(channel, text, blocks) {
 }
 
 async function slackUpdateMessage(channel, ts, text, blocks) {
-  if (!ts) return;
-  const result = await slackAPI('chat.update', { channel, ts, text, blocks });
+  if (ts == null || ts === '') return;
+  const tsStr = String(ts);
+  const result = await slackAPI('chat.update', { channel, ts: tsStr, text, blocks });
   if (result.data && result.data.ok === false) {
-    log('slack', 'chat.update FAILED:', result.data.error);
+    log('slack', 'chat.update FAILED:', result.data.error, '| channel:', channel, '| ts:', tsStr);
   }
   return result;
 }
@@ -930,8 +931,12 @@ async function runGenerationWithTracker({ customerId, productCodes, curatorCode,
     const initResult = await slackPostMessage(channel, `Demo request: ${brandName}`,
       buildTrackerBlocks({ ...trackerParams, status: 'Submitted', statusEmoji: ':hourglass_flowing_sand:', statusDetail: 'Your demo is queued and will begin generating shortly...' })
     );
-    messageTs = initResult.data?.ts;
-    log('tracker', 'Initial message posted, ts:', messageTs);
+    messageTs = initResult.data?.ts != null ? String(initResult.data.ts) : null;
+    if (!messageTs || initResult.data?.ok === false) {
+      log('tracker', 'Initial post missing ts or not ok:', JSON.stringify(initResult.data || {}));
+    } else {
+      log('tracker', 'Initial message posted, ts:', messageTs);
+    }
   } catch (msgErr) {
     log('tracker', 'FAILED to post initial message:', msgErr.message);
   }
@@ -971,123 +976,146 @@ async function runGenerationWithTracker({ customerId, productCodes, curatorCode,
 }
 
 // ============================================
-//  MAIN HANDLER
+//  MAIN HANDLER (Web `fetch` — required so @vercel/functions waitUntil registers)
 // ============================================
 
-module.exports = async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  const body = req.body;
-
-  // ---- Slash command: /cylindo-demo ----
-  if (body.command === '/cylindo-demo') {
-    // Setup sub-command: post the button to the channel
-    if (body.text && body.text.trim().toLowerCase() === 'setup') {
-      try {
-        await postButtonMessage(body.channel_id);
-        return res.status(200).json({
-          response_type: 'ephemeral',
-          text: ':white_check_mark: Demo Generator button posted! Pin the message to keep it accessible.',
-        });
-      } catch (err) {
-        return res.status(200).json({
-          response_type: 'ephemeral',
-          text: `:x: Failed to post button: ${err.message}`,
-        });
-      }
-    }
-
-    // Default: open modal
-    const triggerId = body.trigger_id;
-    if (!triggerId) {
-      return res.status(200).json({
-        response_type: 'ephemeral',
-        text: ':warning: No trigger_id received. Please try again.',
-      });
-    }
-
+async function parseSlackRequestBody(request) {
+  const raw = await request.text();
+  if (!raw || !raw.trim()) return {};
+  const ct = (request.headers.get('content-type') || '').toLowerCase();
+  if (ct.includes('application/json')) {
     try {
-      const result = await openModal(triggerId, body.channel_id);
-      if (result.data && !result.data.ok) {
-        return res.status(200).json({
-          response_type: 'ephemeral',
-          text: `:warning: Could not open form: ${result.data.error || 'unknown error'}`,
-        });
-      }
-      return res.status(200).send('');
-    } catch (err) {
-      return res.status(200).json({
-        response_type: 'ephemeral',
-        text: `:x: Error opening form: ${err.message}`,
-      });
+      return JSON.parse(raw);
+    } catch {
+      return {};
     }
   }
+  const params = new URLSearchParams(raw);
+  const out = {};
+  for (const [key, value] of params) out[key] = value;
+  return out;
+}
 
-  // ---- Interactive payloads (button clicks + modal submissions) ----
-  if (body.payload) {
-    const payload = JSON.parse(body.payload);
+const slackFetchHandler = {
+  async fetch(request) {
+    if (request.method !== 'POST') {
+      return Response.json({ error: 'Method not allowed' }, { status: 405 });
+    }
 
-    // Button click → open modal
-    if (payload.type === 'block_actions') {
-      const action = payload.actions && payload.actions[0];
-      if (action && action.action_id === 'open_demo_form') {
-        log('button', 'Create Demo button clicked by', payload.user?.name);
+    let body;
+    try {
+      body = await parseSlackRequestBody(request);
+    } catch (e) {
+      log('handler', 'Body parse error:', e.message);
+      return new Response('', { status: 400 });
+    }
+
+    // ---- Slash command: /cylindo-demo ----
+    if (body.command === '/cylindo-demo') {
+      if (body.text && body.text.trim().toLowerCase() === 'setup') {
         try {
-          await openModal(payload.trigger_id, payload.channel?.id || DEMO_CHANNEL);
+          await postButtonMessage(body.channel_id);
+          return Response.json({
+            response_type: 'ephemeral',
+            text: ':white_check_mark: Demo Generator button posted! Pin the message to keep it accessible.',
+          });
         } catch (err) {
-          log('button', 'Failed to open modal:', err.message);
+          return Response.json({
+            response_type: 'ephemeral',
+            text: `:x: Failed to post button: ${err.message}`,
+          });
         }
-        return res.status(200).send('');
       }
-      return res.status(200).send('');
-    }
 
-    // Modal submission → close modal, run generation via waitUntil
-    if (payload.type === 'view_submission' && payload.view.callback_id === 'cylindo_demo_submit') {
-      const values = payload.view.state.values;
-      const userId = payload.user.id;
+      const triggerId = body.trigger_id;
+      if (!triggerId) {
+        return Response.json({
+          response_type: 'ephemeral',
+          text: ':warning: No trigger_id received. Please try again.',
+        });
+      }
 
-      const customerId = values.customer_id.value.value.trim();
-      const productCodesRaw = values.product_codes.value.value.trim();
-      const curatorCode = values.curator_code.value.value.trim();
-      const brandName = values.brand_name.value.value.trim();
-      const brandUrl = values.brand_url?.value?.value?.trim() || '';
-
-      let channelId = DEMO_CHANNEL;
       try {
-        const meta = JSON.parse(payload.view.private_metadata || '{}');
-        if (meta.channel_id) channelId = meta.channel_id;
-      } catch {}
-
-      const productCodes = productCodesRaw.split(',').map((p) => p.trim()).filter(Boolean);
-
-      log('submit', 'Modal submitted by', payload.user?.name, '| brand:', brandName, '| products:', productCodes.join(', '));
-
-      // Use waitUntil to keep function alive AFTER we respond
-      waitUntil(
-        runGenerationWithTracker({
-          customerId, productCodes, curatorCode, brandName, brandUrl, userId, channelId,
-        })
-      );
-
-      // Close the modal immediately — generation runs via waitUntil above
-      return res.status(200).json({ response_action: 'clear' });
+        const result = await openModal(triggerId, body.channel_id);
+        if (result.data && !result.data.ok) {
+          return Response.json({
+            response_type: 'ephemeral',
+            text: `:warning: Could not open form: ${result.data.error || 'unknown error'}`,
+          });
+        }
+        return new Response('', { status: 200 });
+      } catch (err) {
+        return Response.json({
+          response_type: 'ephemeral',
+          text: `:x: Error opening form: ${err.message}`,
+        });
+      }
     }
 
-    return res.status(200).send('');
-  }
+    // ---- Interactive payloads (button clicks + modal submissions) ----
+    if (body.payload) {
+      const payload = JSON.parse(body.payload);
 
-  // ---- Fallback ----
-  if (body.trigger_id) {
-    try {
-      await openModal(body.trigger_id);
-      return res.status(200).send('');
-    } catch (err) {
-      return res.status(200).json({ response_type: 'ephemeral', text: `:x: Error: ${err.message}` });
+      if (payload.type === 'block_actions') {
+        const action = payload.actions && payload.actions[0];
+        if (action && action.action_id === 'open_demo_form') {
+          log('button', 'Create Demo button clicked by', payload.user?.name);
+          try {
+            await openModal(payload.trigger_id, payload.channel?.id || DEMO_CHANNEL);
+          } catch (err) {
+            log('button', 'Failed to open modal:', err.message);
+          }
+          return new Response('', { status: 200 });
+        }
+        return new Response('', { status: 200 });
+      }
+
+      if (payload.type === 'view_submission' && payload.view.callback_id === 'cylindo_demo_submit') {
+        const values = payload.view.state.values;
+        const userId = payload.user.id;
+
+        const customerId = values.customer_id.value.value.trim();
+        const productCodesRaw = values.product_codes.value.value.trim();
+        const curatorCode = values.curator_code.value.value.trim();
+        const brandName = values.brand_name.value.value.trim();
+        const brandUrl = values.brand_url?.value?.value?.trim() || '';
+
+        let channelId = DEMO_CHANNEL;
+        try {
+          const meta = JSON.parse(payload.view.private_metadata || '{}');
+          if (meta.channel_id) channelId = meta.channel_id;
+        } catch {}
+
+        const productCodes = productCodesRaw.split(',').map((p) => p.trim()).filter(Boolean);
+
+        log('submit', 'Modal submitted by', payload.user?.name, '| brand:', brandName, '| products:', productCodes.join(', '));
+
+        waitUntil(
+          runGenerationWithTracker({
+            customerId, productCodes, curatorCode, brandName, brandUrl, userId, channelId,
+          }).catch((err) => {
+            log('waitUntil', 'runGenerationWithTracker rejected:', err.message, err.stack);
+          })
+        );
+
+        return Response.json({ response_action: 'clear' });
+      }
+
+      return new Response('', { status: 200 });
     }
-  }
 
-  res.status(200).json({ response_type: 'ephemeral', text: 'Type `/cylindo-demo` to open the demo generator form.' });
+    if (body.trigger_id) {
+      try {
+        await openModal(body.trigger_id);
+        return new Response('', { status: 200 });
+      } catch (err) {
+        return Response.json({ response_type: 'ephemeral', text: `:x: Error: ${err.message}` });
+      }
+    }
+
+    return Response.json({ response_type: 'ephemeral', text: 'Type `/cylindo-demo` to open the demo generator form.' });
+  },
 };
+
+module.exports = slackFetchHandler;
+module.exports.default = slackFetchHandler;
