@@ -85,6 +85,360 @@ function fetchRawText(url) {
   });
 }
 
+// ---- Brand URL Scraping ----
+
+function withTimeout(promise, ms) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(`Timeout after ${ms}ms`)), ms)),
+  ]);
+}
+
+function fetchBrandPage(url) {
+  return new Promise((resolve, reject) => {
+    const parsed = new URL(url);
+    const opts = {
+      hostname: parsed.hostname,
+      path: parsed.pathname + parsed.search,
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        Accept: 'text/html,application/xhtml+xml',
+      },
+    };
+    let redirects = 0;
+    function doFetch(fetchOpts) {
+      https.get(fetchOpts, (res) => {
+        if ((res.statusCode === 301 || res.statusCode === 302) && res.headers.location && redirects < 5) {
+          redirects++;
+          try {
+            const next = new URL(res.headers.location, `https://${fetchOpts.hostname}`);
+            return doFetch({ hostname: next.hostname, path: next.pathname + next.search, headers: fetchOpts.headers });
+          } catch { return reject(new Error('Bad redirect')); }
+        }
+        if (res.statusCode !== 200) return reject(new Error(`HTTP ${res.statusCode}`));
+        let data = '';
+        let bytes = 0;
+        res.on('data', (chunk) => {
+          bytes += chunk.length;
+          if (bytes > 2 * 1024 * 1024) { res.destroy(); return reject(new Error('Response too large')); }
+          data += chunk;
+        });
+        res.on('end', () => resolve(data));
+      }).on('error', reject);
+    }
+    doFetch(opts);
+  });
+}
+
+function extractInlineCSS(html) {
+  const re = /<style[^>]*>([\s\S]*?)<\/style>/gi;
+  let result = '';
+  let m;
+  while ((m = re.exec(html)) !== null) result += m[1] + '\n';
+  return result;
+}
+
+async function fetchExternalCSS(html, baseUrl) {
+  const linkRe = /<link[^>]+(?:rel=["']stylesheet["'][^>]+href=["']([^"']+)["']|href=["']([^"']+)["'][^>]+rel=["']stylesheet["'])[^>]*>/gi;
+  const urls = [];
+  let m;
+  while ((m = linkRe.exec(html)) !== null) {
+    const href = m[1] || m[2];
+    if (!href || href.includes('fonts.googleapis.com')) continue;
+    try {
+      const abs = new URL(href, baseUrl);
+      const base = new URL(baseUrl);
+      if (abs.hostname === base.hostname || abs.hostname.endsWith('.' + base.hostname.replace(/^www\./, ''))) {
+        urls.push(abs.href);
+      }
+    } catch {}
+    if (urls.length >= 2) break;
+  }
+  const results = [];
+  for (const cssUrl of urls) {
+    try {
+      const text = await withTimeout(fetchRawText(cssUrl), 5000);
+      results.push(text);
+    } catch (e) {
+      log('scrape', 'CSS fetch failed:', cssUrl, e.message);
+    }
+  }
+  return results;
+}
+
+function extractFonts(html, css) {
+  const result = { heading: null, body: null, googleFontsUrl: null };
+
+  // 1. Google Fonts <link> — highest confidence
+  const gfRe = /fonts\.googleapis\.com\/css2?\?[^"'>\s]*family=([^"'>\s]+)/gi;
+  const gfMatch = gfRe.exec(html);
+  if (gfMatch) {
+    // Capture the full URL for injection
+    const fullUrlRe = /(https?:\/\/fonts\.googleapis\.com\/css2?\?[^"'>\s]+)/gi;
+    const fullMatch = fullUrlRe.exec(html);
+    if (fullMatch) result.googleFontsUrl = fullMatch[1].replace(/&amp;/g, '&');
+
+    // Parse family names: family=Roboto:wght@400;700&family=Open+Sans:wght@300
+    const familyStr = gfMatch[1].replace(/&amp;/g, '&');
+    const families = familyStr.split(/&family=|family=/i).filter(Boolean);
+    const fontNames = families.map(f => {
+      const name = f.split(':')[0].replace(/\+/g, ' ').trim();
+      return `'${name}'`;
+    }).filter(Boolean);
+
+    if (fontNames.length >= 1) result.heading = fontNames[0] + ', sans-serif';
+    if (fontNames.length >= 2) result.body = fontNames[1] + ', sans-serif';
+    else if (fontNames.length === 1) result.body = fontNames[0] + ', sans-serif';
+  }
+
+  // 2. @font-face declarations
+  if (!result.heading) {
+    const ffRe = /@font-face\s*\{[^}]*font-family:\s*['"]?([^;'"}\n]+)['"]?/gi;
+    const ffNames = new Set();
+    let fm;
+    while ((fm = ffRe.exec(css)) !== null) {
+      ffNames.add(fm[1].trim().replace(/['"]/g, ''));
+    }
+    const names = [...ffNames];
+    if (names.length >= 1) result.heading = `'${names[0]}', sans-serif`;
+    if (names.length >= 2) result.body = `'${names[1]}', sans-serif`;
+    else if (names.length === 1 && !result.body) result.body = `'${names[0]}', sans-serif`;
+  }
+
+  // 3. font-family on body/html/:root
+  if (!result.body) {
+    const bodyFontRe = /(?:body|:root|html)\s*\{[^}]*font-family:\s*([^;}\n]+)/i;
+    const bm = bodyFontRe.exec(css);
+    if (bm) result.body = bm[1].trim();
+  }
+
+  return result;
+}
+
+function normalizeHex(color) {
+  if (!color) return null;
+  color = color.trim().toLowerCase();
+  // Handle rgb/rgba
+  const rgbRe = /rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/;
+  const rgbMatch = rgbRe.exec(color);
+  if (rgbMatch) {
+    const r = parseInt(rgbMatch[1]).toString(16).padStart(2, '0');
+    const g = parseInt(rgbMatch[2]).toString(16).padStart(2, '0');
+    const b = parseInt(rgbMatch[3]).toString(16).padStart(2, '0');
+    return `#${r}${g}${b}`;
+  }
+  // Handle 3-digit hex
+  if (/^#[0-9a-f]{3}$/.test(color)) {
+    return `#${color[1]}${color[1]}${color[2]}${color[2]}${color[3]}${color[3]}`;
+  }
+  if (/^#[0-9a-f]{6}$/.test(color)) return color;
+  return null;
+}
+
+function isLightColor(hex) {
+  if (!hex) return true;
+  hex = normalizeHex(hex) || '#ffffff';
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  return lum > 0.5;
+}
+
+function darkenColor(hex, pct) {
+  hex = normalizeHex(hex);
+  if (!hex) return null;
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  const factor = 1 - pct / 100;
+  const dr = Math.round(r * factor).toString(16).padStart(2, '0');
+  const dg = Math.round(g * factor).toString(16).padStart(2, '0');
+  const db = Math.round(b * factor).toString(16).padStart(2, '0');
+  return `#${dr}${dg}${db}`;
+}
+
+function extractColors(html, css) {
+  const result = { bg: null, accent: null, text: null, border: null, headerBg: null };
+
+  // 1. CSS custom properties
+  const varPatterns = [
+    { key: 'accent', re: /--(?:primary|brand|accent|main)[-_]?colou?r\s*:\s*([^;}\n]+)/gi },
+    { key: 'bg', re: /--(?:bg|background)[-_]?colou?r\s*:\s*([^;}\n]+)/gi },
+    { key: 'text', re: /--(?:text|foreground)[-_]?colou?r\s*:\s*([^;}\n]+)/gi },
+    { key: 'border', re: /--(?:border)[-_]?colou?r\s*:\s*([^;}\n]+)/gi },
+  ];
+  for (const { key, re } of varPatterns) {
+    const vm = re.exec(css);
+    if (vm) {
+      const c = normalizeHex(vm[1]);
+      if (c) result[key] = c;
+    }
+  }
+
+  // 2. <meta name="theme-color">
+  if (!result.accent) {
+    const tcRe = /<meta[^>]+name=["']theme-color["'][^>]+content=["']([^"']+)["']/i;
+    const tcAlt = /<meta[^>]+content=["']([^"']+)["'][^>]+name=["']theme-color["']/i;
+    const tcm = tcRe.exec(html) || tcAlt.exec(html);
+    if (tcm) {
+      const c = normalizeHex(tcm[1]);
+      if (c) result.accent = c;
+    }
+  }
+
+  // 3. Body background/color from CSS
+  if (!result.bg || !result.text) {
+    const bodyRe = /(?:^|\})\s*(?:body|html)\s*\{([^}]+)\}/gim;
+    const bm = bodyRe.exec(css);
+    if (bm) {
+      const block = bm[1];
+      if (!result.bg) {
+        const bgRe = /background(?:-color)?\s*:\s*([^;}\n]+)/i;
+        const bgm = bgRe.exec(block);
+        if (bgm) { const c = normalizeHex(bgm[1]); if (c) result.bg = c; }
+      }
+      if (!result.text) {
+        const clrRe = /(?:^|;)\s*color\s*:\s*([^;}\n]+)/i;
+        const clrm = clrRe.exec(block);
+        if (clrm) { const c = normalizeHex(clrm[1]); if (c) result.text = c; }
+      }
+    }
+  }
+
+  // 4. Header background
+  const hdrRe = /(?:\.header|header|\.site-header|\.navbar|nav)\s*\{([^}]+)\}/gi;
+  const hm = hdrRe.exec(css);
+  if (hm) {
+    const bgRe = /background(?:-color)?\s*:\s*([^;}\n]+)/i;
+    const bgm = bgRe.exec(hm[1]);
+    if (bgm) { const c = normalizeHex(bgm[1]); if (c) result.headerBg = c; }
+  }
+
+  // 5. Color frequency analysis as fallback for accent
+  if (!result.accent) {
+    const hexRe = /#[0-9a-fA-F]{3,6}\b/g;
+    const counts = {};
+    let hm2;
+    while ((hm2 = hexRe.exec(css)) !== null) {
+      const c = normalizeHex(hm2[0]);
+      if (c && c !== '#ffffff' && c !== '#000000' && c !== '#fff' && c !== '#000') {
+        counts[c] = (counts[c] || 0) + 1;
+      }
+    }
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    // Pick top non-white non-black non-gray color
+    for (const [color] of sorted) {
+      const r = parseInt(color.slice(1, 3), 16);
+      const g = parseInt(color.slice(3, 5), 16);
+      const b = parseInt(color.slice(5, 7), 16);
+      const isGray = Math.abs(r - g) < 20 && Math.abs(g - b) < 20 && Math.abs(r - b) < 20;
+      if (!isGray) { result.accent = color; break; }
+    }
+  }
+
+  return result;
+}
+
+function extractLogo(html, baseUrl) {
+  // 1. <img> with "logo" in class/id/alt/src
+  const logoImgPatterns = [
+    /<img[^>]+(?:class|id|alt)=["'][^"']*logo[^"']*["'][^>]*src=["']([^"']+)["']/gi,
+    /<img[^>]+src=["']([^"']+)["'][^>]*(?:class|id|alt)=["'][^"']*logo[^"']*["']/gi,
+    /<img[^>]+src=["']([^"']*logo[^"']+)["']/gi,
+  ];
+  for (const re of logoImgPatterns) {
+    const m = re.exec(html);
+    if (m && m[1]) {
+      try { return new URL(m[1], baseUrl).href; } catch {}
+    }
+  }
+
+  // 2. First <img> inside <header>
+  const headerImgRe = /<header[\s\S]{0,3000}?<img[^>]+src=["']([^"']+)["']/i;
+  const hm = headerImgRe.exec(html);
+  if (hm && hm[1]) {
+    try { return new URL(hm[1], baseUrl).href; } catch {}
+  }
+
+  // 3. Apple touch icon or favicon
+  const iconRe = /<link[^>]+rel=["'](?:apple-touch-icon|icon)["'][^>]+href=["']([^"']+)["']/i;
+  const iconAlt = /<link[^>]+href=["']([^"']+)["'][^>]+rel=["'](?:apple-touch-icon|icon)["']/i;
+  const im = iconRe.exec(html) || iconAlt.exec(html);
+  if (im && im[1]) {
+    try { return new URL(im[1], baseUrl).href; } catch {}
+  }
+
+  // 4. OG image
+  const ogRe = /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i;
+  const ogAlt = /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i;
+  const om = ogRe.exec(html) || ogAlt.exec(html);
+  if (om && om[1]) {
+    try { return new URL(om[1], baseUrl).href; } catch {}
+  }
+
+  return null;
+}
+
+function buildScrapedTheme(fonts, colors, logo) {
+  const theme = {};
+  if (fonts.heading) theme.fontHeading = fonts.heading;
+  if (fonts.body) theme.fontBody = fonts.body;
+  if (colors.bg) theme.colorBg = colors.bg;
+  if (colors.accent) {
+    theme.colorAccent = colors.accent;
+    const hover = darkenColor(colors.accent, 15);
+    if (hover) theme.colorAccentHover = hover;
+  }
+  if (colors.text) theme.colorText = colors.text;
+  if (colors.border) theme.colorBorder = colors.border;
+  if (colors.headerBg) {
+    theme.colorHeaderBg = colors.headerBg;
+    if (!isLightColor(colors.headerBg)) {
+      theme.colorHeaderDarkBg = colors.headerBg;
+    }
+  }
+
+  const result = { theme };
+  if (logo) result.logoImageUrl = logo;
+  if (fonts.googleFontsUrl) result.googleFontsUrl = fonts.googleFontsUrl;
+  return result;
+}
+
+async function scrapeTheme(url) {
+  if (!url) return {};
+  try {
+    log('scrape', 'Fetching brand page:', url);
+    const html = await withTimeout(fetchBrandPage(url), 10000);
+    log('scrape', 'Got HTML:', html.length, 'bytes');
+
+    // Check for SPA shell (very little content)
+    if (html.length < 1000 && /<div\s+id=["'](?:root|app|__next)["']\s*>\s*<\/div>/i.test(html)) {
+      log('scrape', 'SPA shell detected, skipping extraction');
+      return {};
+    }
+
+    const externalCSS = await fetchExternalCSS(html, url);
+    const allCSS = extractInlineCSS(html) + '\n' + externalCSS.join('\n');
+    log('scrape', 'CSS collected:', allCSS.length, 'bytes');
+
+    const fonts = extractFonts(html, allCSS);
+    const colors = extractColors(html, allCSS);
+    const logo = extractLogo(html, url);
+
+    log('scrape', 'Extracted fonts:', JSON.stringify(fonts));
+    log('scrape', 'Extracted colors:', JSON.stringify(colors));
+    log('scrape', 'Extracted logo:', logo);
+
+    const scraped = buildScrapedTheme(fonts, colors, logo);
+    log('scrape', 'Theme keys:', Object.keys(scraped.theme || {}));
+    return scraped;
+  } catch (err) {
+    log('scrape', 'Theme scrape failed, using defaults:', err.message);
+    return {};
+  }
+}
+
 // ---- Slack API ----
 
 async function slackAPI(method, body) {
@@ -355,10 +709,13 @@ function brandPresetForName(brandName) {
   };
 }
 
-function buildConfig(customerId, curatorCode, brandName, brandUrl, products) {
+function buildConfig(customerId, curatorCode, brandName, brandUrl, products, scraped) {
   const preset = brandPresetForName(brandName) || {};
   const presetTheme = preset.theme || {};
+  const scrapedTheme = (scraped && scraped.theme) || {};
   const { theme: _t, ...presetRest } = preset;
+
+  // Layer: defaults → scraped from URL → manual preset (preset wins)
   const theme = {
     fontHeading: "'Libre Baskerville', 'Georgia', serif",
     fontBody: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
@@ -379,6 +736,7 @@ function buildConfig(customerId, curatorCode, brandName, brandUrl, products) {
     colorHeaderDarkText: '#ffffff',
     colorHeaderDarkMuted: 'rgba(255, 255, 255, 0.72)',
     colorNavSaleAccent: '#c9a86a',
+    ...scrapedTheme,
     ...presetTheme,
   };
 
@@ -386,6 +744,7 @@ function buildConfig(customerId, curatorCode, brandName, brandUrl, products) {
     brand: {
       name: brandName,
       logoText: brandName,
+      logoImageUrl: scraped?.logoImageUrl || undefined,
       tagline: 'Cylindo 3D Product Visualization Demo',
       website: brandUrl || '#',
       announcementText: `Cylindo 3D Product Visualization Demo \u2014 ${brandName}`,
@@ -477,7 +836,12 @@ async function generateDemo({ customerId, productCodes, curatorCode, brandName, 
   const products = [];
   const statusParts = [];
 
-  if (onStatusUpdate) await onStatusUpdate(':arrows_counterclockwise: Fetching product data from Cylindo Content API...');
+  // Start brand scrape in parallel with product fetches
+  if (onStatusUpdate) await onStatusUpdate(':mag: Analyzing brand website & fetching product data...');
+  const scrapePromise = withTimeout(scrapeTheme(brandUrl), 15000).catch((err) => {
+    log('gen', 'Scrape timed out or failed:', err.message);
+    return {};
+  });
 
   for (const code of productCodes) {
     log('gen', 'Fetching product config:', code.trim());
@@ -490,7 +854,17 @@ async function generateDemo({ customerId, productCodes, curatorCode, brandName, 
     statusParts.push(`\u2022 *${formatName(code.trim())}*: ${features.length} feature group(s), ${totalOpts} options`);
   }
 
-  const config = buildConfig(customerId, curatorCode, brandName, brandUrl, products);
+  // Wait for scrape result (likely done by now since it ran in parallel)
+  const scraped = await scrapePromise;
+  const scrapedKeyCount = Object.keys(scraped.theme || {}).length;
+  if (scrapedKeyCount > 0) {
+    statusParts.push(`\u2022 *Brand style:* ${scrapedKeyCount} properties extracted from PDP`);
+    if (scraped.logoImageUrl) statusParts.push(`\u2022 *Logo:* Extracted from brand site`);
+  } else if (brandUrl) {
+    statusParts.push(`\u2022 *Brand style:* Using default theme`);
+  }
+
+  const config = buildConfig(customerId, curatorCode, brandName, brandUrl, products, scraped);
 
   // Read template files
   const fs = require('fs');
@@ -505,17 +879,24 @@ async function generateDemo({ customerId, productCodes, curatorCode, brandName, 
     log('gen', 'Templates OK | CSS:', stylesCSS.length, 'bytes | JS:', appJS.length, 'bytes');
   } catch (fsErr) {
     log('gen', 'Filesystem read failed:', fsErr.message, '| Falling back to GitHub');
-    const baseUrl = 'https://raw.githubusercontent.com/msheppard7-wq/cylindo-demo-generator/main/templates';
-    [stylesCSS, appJS] = await Promise.all([fetchRawText(`${baseUrl}/styles.css`), fetchRawText(`${baseUrl}/app.js`)]);
+    const ghBase = 'https://raw.githubusercontent.com/msheppard7-wq/cylindo-demo-generator/main/templates';
+    [stylesCSS, appJS] = await Promise.all([fetchRawText(`${ghBase}/styles.css`), fetchRawText(`${ghBase}/app.js`)]);
     log('gen', 'Templates from GitHub | CSS:', stylesCSS.length, 'bytes | JS:', appJS.length, 'bytes');
   }
 
   if (onStatusUpdate) await onStatusUpdate(':arrows_counterclockwise: Deploying to Vercel...');
 
+  // Inject scraped Google Fonts into index.html if available
+  let indexHTML = getIndexHTML();
+  if (scraped.googleFontsUrl) {
+    indexHTML = indexHTML.replace('</head>', `  <link href="${scraped.googleFontsUrl}" rel="stylesheet">\n</head>`);
+    log('gen', 'Injected Google Fonts link:', scraped.googleFontsUrl.substring(0, 80));
+  }
+
   const slug = slugify(brandName);
   const projectName = `cylindo-demo-${slug}`;
   const files = [
-    { path: 'index.html', content: getIndexHTML() },
+    { path: 'index.html', content: indexHTML },
     { path: 'styles.css', content: stylesCSS },
     { path: 'app.js', content: appJS },
     { path: 'config.json', content: JSON.stringify(config, null, 2) },
