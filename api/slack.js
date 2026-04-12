@@ -952,25 +952,50 @@ async function runGenerationWithTracker({ customerId, productCodes, curatorCode,
     }
   };
 
-  // 2. Run generation
-  try {
-    const result = await generateDemo({ customerId, productCodes, curatorCode, brandName, brandUrl, onStatusUpdate });
+  // 2. Run generation with automatic retry (up to 3 attempts)
+  const MAX_ATTEMPTS = 3;
+  const RETRY_DELAY_MS = 10000; // 10 seconds between retries
 
-    // 3. Final update — "Created"
-    await slackUpdateMessage(channel, messageTs, `Demo ready: ${brandName}`,
-      buildTrackerBlocks({ ...trackerParams, status: 'Created', statusEmoji: ':white_check_mark:', demoUrl: result.demoUrl, statusParts: result.statusParts })
-    );
-    log('tracker', 'Final status: Created |', result.demoUrl);
-  } catch (error) {
-    log('error', 'GENERATION FAILED:', error.message, error.stack);
-
-    // 3. Final update — "Failed"
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
-      await slackUpdateMessage(channel, messageTs, `Demo failed: ${brandName}`,
-        buildTrackerBlocks({ ...trackerParams, status: 'Failed', statusEmoji: ':x:', errorMessage: error.message })
+      if (attempt > 1) {
+        log('retry', `Attempt ${attempt}/${MAX_ATTEMPTS} for ${brandName}`);
+        await onStatusUpdate(`:arrows_counterclockwise: Retry ${attempt}/${MAX_ATTEMPTS} — regenerating...`);
+        await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
+      }
+
+      const result = await generateDemo({ customerId, productCodes, curatorCode, brandName, brandUrl, onStatusUpdate });
+
+      // Success — update tracker to "Created"
+      await slackUpdateMessage(channel, messageTs, `Demo ready: ${brandName}`,
+        buildTrackerBlocks({ ...trackerParams, status: 'Created', statusEmoji: ':white_check_mark:', demoUrl: result.demoUrl, statusParts: result.statusParts })
       );
-    } catch (postErr) {
-      log('error', 'Also failed to update tracker:', postErr.message);
+      log('tracker', 'Final status: Created |', result.demoUrl);
+      return; // Done — exit the retry loop
+
+    } catch (error) {
+      log('error', `Attempt ${attempt}/${MAX_ATTEMPTS} FAILED:`, error.message);
+
+      if (attempt < MAX_ATTEMPTS) {
+        // Not the last attempt — update tracker and retry
+        try {
+          await slackUpdateMessage(channel, messageTs, `Retrying: ${brandName}`,
+            buildTrackerBlocks({ ...trackerParams, status: 'Retrying', statusEmoji: ':warning:', statusDetail: `:warning: Attempt ${attempt} failed: ${error.message}\n:arrows_counterclockwise: Retrying in ${RETRY_DELAY_MS / 1000}s (attempt ${attempt + 1}/${MAX_ATTEMPTS})...` })
+          );
+        } catch (e) {
+          log('error', 'Failed to update retry status:', e.message);
+        }
+      } else {
+        // Final attempt failed — mark as Failed
+        log('error', 'All attempts exhausted for', brandName);
+        try {
+          await slackUpdateMessage(channel, messageTs, `Demo failed: ${brandName}`,
+            buildTrackerBlocks({ ...trackerParams, status: 'Failed', statusEmoji: ':x:', errorMessage: `Failed after ${MAX_ATTEMPTS} attempts. Last error: ${error.message}` })
+          );
+        } catch (postErr) {
+          log('error', 'Also failed to update tracker:', postErr.message);
+        }
+      }
     }
   }
 }
