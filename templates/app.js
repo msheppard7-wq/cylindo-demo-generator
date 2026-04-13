@@ -120,11 +120,22 @@ function renderCuratorCarousel(product) {
   const fallbackThumbUrl = getPlaceholderUrl(product.code);
   if (!frames.includes(currentMediaFrame)) currentMediaFrame = frames[0];
 
+  // Thumbnails: omit feature params so angles resolve from Content API. Demo-only swatch
+  // values (e.g. FABRIC:SAGE) are not guaranteed to exist on the real SKU and can 404.
   rail.innerHTML = frames.map((frame) => `
     <button type="button" class="curator-thumb${frame === currentMediaFrame ? ' active' : ''}" data-frame="${frame}" aria-label="View image ${frame}">
-      <img src="${getProductImageUrl(product.code, frame, currentFeatures, 220)}" alt="${product.name} view ${frame}" loading="lazy" onerror="this.onerror=null;this.src='${fallbackThumbUrl}'" />
+      <img src="${getProductImageUrl(product.code, frame, null, 220)}" alt="${product.name} — view ${frame}" loading="lazy" decoding="async" />
     </button>
   `).join('');
+
+  rail.querySelectorAll('.curator-thumb img').forEach((img) => {
+    img.addEventListener('error', function onThumbError() {
+      img.removeEventListener('error', onThumbError);
+      if (img.dataset.fallbackApplied) return;
+      img.dataset.fallbackApplied = '1';
+      img.src = fallbackThumbUrl;
+    });
+  });
 
   rail.querySelectorAll('.curator-thumb').forEach((btn) => {
     btn.addEventListener('click', () => {

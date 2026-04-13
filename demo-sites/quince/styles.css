@@ -591,6 +591,8 @@ html.header-variant-dark-retail .qty-input {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  flex-shrink: 0;
+  min-width: 68px;
 }
 
 .curator-thumb {
