@@ -1,0 +1,103 @@
+{
+  "brand": {
+    "name": "Haverty's",
+    "logoText": "HAVERTYS",
+    "logoSubline": "FURNITURE · EST 1885",
+    "tagline": "Cylindo 3D Product Visualization Demo",
+    "website": "https://www.havertys.com",
+    "announcementText": "",
+    "headerVariant": "dark-retail",
+    "searchPlaceholder": "Search",
+    "navLinks": [
+      "LIVING",
+      "BEDROOM",
+      "DINING",
+      "MATTRESSES",
+      "OFFICE",
+      "DECOR",
+      "FREE DESIGN SERVICE",
+      "FINANCING",
+      "REGRET-FREE GUARANTEE"
+    ],
+    "navLinksRight": [
+      { "label": "SALE", "accent": true },
+      { "label": "Spring Style Event", "accent": false }
+    ],
+    "navHighlight": "LIVING",
+    "footerCopyright": "Haverty's — Cylindo Demo",
+    "footerColumns": [
+      { "title": "Customer Care", "links": ["Contact Us", "Shipping & Returns", "FAQ", "Design Services"] },
+      { "title": "About", "links": ["Our Story", "Design Philosophy", "Sustainability", "Careers"] },
+      { "title": "Explore", "links": ["New Arrivals", "Best Sellers", "Collections", "Inspiration"] }
+    ],
+    "theme": {
+      "fontHeading": "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+      "fontBody": "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+      "colorBg": "#ffffff",
+      "colorBgAlt": "#f7f7f6",
+      "colorText": "#2c3138",
+      "colorTextSecondary": "#5a6169",
+      "colorAccent": "#2c3138",
+      "colorAccentHover": "#1a1e23",
+      "colorBorder": "#d9d9d9",
+      "colorSuccess": "#4a5d4a",
+      "colorAnnouncementBg": "#f5f5f5",
+      "colorAnnouncementText": "#333333",
+      "colorHeaderBg": "#ffffff",
+      "colorHeaderBorder": "#e8e8e8",
+      "colorHeaderDarkBg": "#2c3138",
+      "colorHeaderDarkBorder": "#3d444d",
+      "colorHeaderDarkText": "#ffffff",
+      "colorHeaderDarkMuted": "rgba(255, 255, 255, 0.72)",
+      "colorNavSaleAccent": "#c9a86a",
+      "headerStickyOffset": "214px"
+    }
+  },
+  "cylindo": {
+    "customerId": "REPLACE_CYLINDO_CUSTOMER_ID",
+    "remoteConfig": "REPLACE_CURATOR_CODE"
+  },
+  "products": [
+    {
+      "id": "elise-80-inch-3-seat-sofa",
+      "name": "Elise 80 Inch 3 Seat Sofa",
+      "code": "E80I3SS",
+      "price": "$3,099.99",
+      "priceNote": "",
+      "rating": 4.8,
+      "reviewCount": 0,
+      "description": "The Elise 80 Inch 3 Seat Sofa brings refined comfort and versatile style to your living space. Explore every finish in full 360° with Cylindo's interactive 3D viewer.",
+      "badges": [{ "text": "Cylindo 3D", "type": "new" }],
+      "breadcrumb": ["Home", "Living", "Sofas"],
+      "features": [
+        {
+          "code": "FABRIC",
+          "label": "Fabric",
+          "options": [{ "name": "As shown", "value": "DEFAULT" }]
+        }
+      ],
+      "highlights": [
+        { "title": "Interactive 3D", "description": "Rotate, zoom, and explore every angle with Cylindo's 360° viewer." },
+        { "title": "Real-Time Configuration", "description": "Select different options and watch the product update instantly." },
+        { "title": "Material Swatches", "description": "Swatches from the Cylindo Content API match the rendered materials." },
+        { "title": "Tear Sheet", "description": "Generate a downloadable tear sheet with the current configuration." },
+        { "title": "Seamless Integration", "description": "This viewer integrates directly into any e-commerce platform." }
+      ],
+      "specs": [
+        {
+          "group": "Product Information",
+          "items": [
+            ["Product Code", "E80I3SS"],
+            ["3D Viewer", "Cylindo Viewer"],
+            ["Configuration", "Update cylindo.customerId and remoteConfig in this file for live data"]
+          ]
+        }
+      ],
+      "faqs": [
+        { "q": "What am I looking at?", "a": "A Cylindo-powered product demo for Haverty's." },
+        { "q": "Can I interact with the 3D view?", "a": "Yes — drag to rotate and use the selectors when your Curator is configured." }
+      ],
+      "leadTime": "Contact your local store for availability"
+    }
+  ]
+}
