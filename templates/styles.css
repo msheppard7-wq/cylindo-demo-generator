@@ -722,6 +722,7 @@ html.header-variant-dark-retail .qty-input {
   flex-wrap: wrap;
   gap: 10px 12px;
   align-items: flex-start;
+  padding-left: 6px;
 }
 
 .fabric-btn {
@@ -746,6 +747,18 @@ html.header-variant-dark-retail .qty-input {
   height: 100%;
   object-fit: cover;
   border-radius: 50%;
+}
+
+.fabric-btn.color-swatch {
+  background: transparent;
+  border-color: #c8c2b7;
+}
+
+.fabric-color-chip {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 1px solid rgba(0, 0, 0, 0.12);
 }
 
 .fabric-btn:hover { border-color: var(--color-text-secondary); }

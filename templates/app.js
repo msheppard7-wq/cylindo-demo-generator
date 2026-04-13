@@ -55,6 +55,26 @@ function getSwatchUrl(productCode, featureCode, optionValue, size) {
   return `${CONTENT_API}/${config.cylindo.customerId}/products/${encodeURIComponent(productCode)}/material/swatch.jpeg?feature=${encodeURIComponent(featureCode)}:${encodeURIComponent(optionValue)}&size=${size || 200}`;
 }
 
+function getOptionSwatchColor(option) {
+  if (!option || typeof option !== 'object') return '';
+  const raw = option.swatchColor || option.color || option.hex || '';
+  if (typeof raw !== 'string') return '';
+  const color = raw.trim();
+  if (!color) return '';
+  if (color.startsWith('#')) return color;
+  if (/^[0-9a-fA-F]{6}$/.test(color) || /^[0-9a-fA-F]{3}$/.test(color)) return `#${color}`;
+  return color;
+}
+
+function buildSwatchButtonMarkup(productCode, feature, option, isActive) {
+  const swatchColor = getOptionSwatchColor(option);
+  const classes = `fabric-btn${isActive ? ' active' : ''}${swatchColor ? ' color-swatch' : ''}`;
+  const colorMarkup = swatchColor
+    ? `<span class="fabric-color-chip" style="background:${swatchColor}"></span>`
+    : `<img src="${getSwatchUrl(productCode, feature.code, option.value, 200)}" alt="${option.name}" loading="lazy" onerror="this.style.display='none'; this.parentElement.classList.add('fallback')">`;
+  return `<button type="button" class="${classes}" data-value="${option.value}" data-name="${option.name}" aria-label="${feature.label}: ${option.name}" title="${option.name}">${colorMarkup}</button>`;
+}
+
 function getPlaceholderUrl(productCode) {
   return `${CONTENT_API}/${config.cylindo.customerId}/products/${encodeURIComponent(productCode)}/default/${config.cylindo.remoteConfig}/placeholder.webp?size=768`;
 }
@@ -320,11 +340,7 @@ function renderProduct() {
           <span class="option-value-label feature-selected" data-feature="${feature.code}">${firstOption.name}</span>
         </div>
         <div class="fabric-options" data-feature-code="${feature.code}">
-          ${feature.options.map((opt, i) =>
-            `<button type="button" class="fabric-btn${i === 0 ? ' active' : ''}" data-value="${opt.value}" data-name="${opt.name}" aria-label="${feature.label}: ${opt.name}" title="${opt.name}">
-              <img src="${getSwatchUrl(product.code, feature.code, opt.value, 200)}" alt="${opt.name}" loading="lazy" onerror="this.style.display='none'; this.parentElement.classList.add('fallback')">
-            </button>`
-          ).join('')}
+          ${feature.options.map((opt, i) => buildSwatchButtonMarkup(product.code, feature, opt, i === 0)).join('')}
         </div>
       </div>
     `;
