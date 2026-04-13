@@ -66,8 +66,32 @@ function getOptionSwatchColor(option) {
   return color;
 }
 
+function getFallbackSwatchColorByName(optionName) {
+  if (!optionName) return '';
+  const normalized = String(optionName).trim().toLowerCase();
+  const map = {
+    sage: '#a5b09c',
+    vanilla: '#f2e8cf',
+    black: '#1f1f1f',
+    'bottle green': '#2f5f4f',
+    green: '#6e8f74',
+    white: '#f8f8f6',
+    ivory: '#f4efe3',
+    cream: '#efe5d2',
+    gray: '#8a8f95',
+    grey: '#8a8f95',
+    charcoal: '#4d5257',
+    navy: '#2e405e',
+    blue: '#6a7f9f',
+    brown: '#7a5b45',
+    tan: '#b99b7a',
+    beige: '#cfc2aa'
+  };
+  return map[normalized] || '';
+}
+
 function buildSwatchButtonMarkup(productCode, feature, option, isActive) {
-  const swatchColor = getOptionSwatchColor(option);
+  const swatchColor = getOptionSwatchColor(option) || getFallbackSwatchColorByName(option.name);
   const classes = `fabric-btn${isActive ? ' active' : ''}${swatchColor ? ' color-swatch' : ''}`;
   const colorMarkup = swatchColor
     ? `<span class="fabric-color-chip" style="background:${swatchColor}"></span>`
