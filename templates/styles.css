@@ -155,6 +155,36 @@ body {
   color: var(--color-text-secondary);
 }
 
+.hdr-search-inline {
+  display: none;
+  align-items: stretch;
+  width: 280px;
+  max-width: 35vw;
+  border: 1px solid var(--color-border);
+  background: #f6f6f6;
+}
+
+.hdr-search-inline-input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  background: transparent;
+  padding: 8px 10px;
+  font-size: 12px;
+  font-family: var(--font-body);
+  color: var(--color-text);
+  outline: none;
+}
+
+.hdr-search-inline-btn {
+  width: 36px;
+  border: none;
+  border-left: 1px solid var(--color-border);
+  background: #ea9a67;
+  color: #222;
+  cursor: pointer;
+}
+
 .header-actions {
   display: flex;
   align-items: center;
@@ -550,6 +580,41 @@ html.header-variant-dark-retail .qty-input {
   align-self: start;
 }
 
+.media-stage {
+  display: grid;
+  grid-template-columns: 68px minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.curator-carousel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.curator-thumb {
+  width: 68px;
+  height: 68px;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  background: #fff;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.curator-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.curator-thumb.active {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 1px var(--color-accent);
+}
+
 .curator-meta {
   display: flex;
   align-items: center;
@@ -760,6 +825,85 @@ html.header-variant-dark-retail .qty-input {
   height: 100%;
   border-radius: 50%;
   border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+html.header-variant-quince {
+  --font-heading: 'Libre Baskerville', 'Georgia', serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --color-bg: #ffffff;
+  --color-bg-alt: #fafafa;
+  --color-text: #1f2123;
+  --color-text-secondary: #5f656b;
+  --color-accent: #2f3237;
+  --color-accent-hover: #1f2123;
+  --color-border: #e4e4e4;
+  --announcement-bg: #ea9a67;
+  --announcement-text: #1f2123;
+  --header-sticky-offset: 112px;
+}
+
+html.header-variant-quince .header-announcement {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  padding: 6px 12px;
+  border-bottom: none;
+}
+
+html.header-variant-quince .header-main-inner {
+  gap: 16px;
+  min-height: 56px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+html.header-variant-quince .logo {
+  font-size: 34px;
+  font-weight: 400;
+  letter-spacing: -0.03em;
+}
+
+html.header-variant-quince .main-nav {
+  justify-content: flex-start;
+  gap: 8px 18px;
+}
+
+html.header-variant-quince .main-nav a {
+  font-size: 11px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+html.header-variant-quince .hdr-search-inline {
+  display: inline-flex;
+}
+
+html.header-variant-quince .header-icon-link[aria-label="Search"] {
+  display: none;
+}
+
+html.header-variant-quince .product-grid {
+  grid-template-columns: minmax(0, 1.18fr) minmax(320px, 0.82fr);
+  gap: clamp(28px, 3vw, 44px);
+}
+
+html.header-variant-quince .curator-meta {
+  display: none;
+}
+
+html.header-variant-quince .option-label {
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+html.header-variant-quince .fabric-btn {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border-width: 1px;
+}
+
+html.header-variant-quince .fabric-btn.active {
+  box-shadow: 0 0 0 2px #fff, 0 0 0 3px #2f3237;
 }
 
 .fabric-btn:hover { border-color: var(--color-text-secondary); }
@@ -1336,6 +1480,20 @@ html.header-variant-dark-retail .qty-input {
     grid-template-columns: 1fr;
     gap: 28px;
   }
+  .media-stage {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .curator-carousel {
+    flex-direction: row;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  .curator-thumb {
+    flex: 0 0 62px;
+    width: 62px;
+    height: 62px;
+  }
   .product-media {
     position: relative;
     top: 0;
@@ -1351,6 +1509,12 @@ html.header-variant-dark-retail .qty-input {
   .menu-btn--default { display: flex; }
   .main-nav { display: none; }
   .header-main-inner { gap: 12px; }
+  html.header-variant-quince .hdr-search-inline {
+    width: 100%;
+    max-width: none;
+    order: 3;
+    margin-top: 6px;
+  }
 
   .hdr-dr-utilities {
     flex-wrap: wrap;

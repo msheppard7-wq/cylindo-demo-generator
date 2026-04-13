@@ -28,6 +28,12 @@
           <a href="#" class="logo" id="logo-default"></a>
           <nav class="main-nav" id="main-nav" aria-label="Primary"></nav>
           <div class="header-actions">
+            <div class="hdr-search-inline" id="header-search-inline" hidden>
+              <input type="search" class="hdr-search-inline-input" id="hdr-search-inline-input" placeholder="Search" autocomplete="off" />
+              <button class="hdr-search-inline-btn" type="button" aria-label="Search">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              </button>
+            </div>
             <a href="#" class="header-icon-link" aria-label="Search">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             </a>
@@ -97,7 +103,10 @@
     <div class="container product-grid">
       <div class="product-media">
         <div class="curator-meta" id="curator-meta"></div>
-        <div class="cylindo-wrapper" id="cylindo-container"></div>
+        <div class="media-stage">
+          <aside class="curator-carousel" id="curator-carousel" aria-label="Product image thumbnails"></aside>
+          <div class="cylindo-wrapper" id="cylindo-container"></div>
+        </div>
         <button class="tearsheet-btn" id="tearsheet-btn" type="button">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg>
           <span>Download Tear Sheet</span>

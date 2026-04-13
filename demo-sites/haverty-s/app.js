@@ -14,6 +14,7 @@
 let config = null;
 let currentProductIndex = 0;
 let currentFeatures = {}; // Track current feature selections for tear sheet
+let currentMediaFrame = 1;
 
 const CONTENT_API = 'https://content.cylindo.com/api/v2';
 
@@ -101,6 +102,43 @@ function buildSwatchButtonMarkup(productCode, feature, option, isActive) {
 
 function getPlaceholderUrl(productCode) {
   return `${CONTENT_API}/${config.cylindo.customerId}/products/${encodeURIComponent(productCode)}/default/${config.cylindo.remoteConfig}/placeholder.webp?size=768`;
+}
+
+function getGalleryFramesForProduct(product) {
+  const fallbackFrames = [1, 9, 13, 17, 25];
+  const frames = Array.isArray(product.mediaFrames) && product.mediaFrames.length ? product.mediaFrames : fallbackFrames;
+  const valid = frames
+    .map((frame) => Number(frame))
+    .filter((frame, idx, arr) => Number.isInteger(frame) && frame > 0 && arr.indexOf(frame) === idx);
+  return valid.length ? valid : [1];
+}
+
+function renderCuratorCarousel(product) {
+  const rail = document.getElementById('curator-carousel');
+  if (!rail || !product) return;
+  const frames = getGalleryFramesForProduct(product);
+  if (!frames.includes(currentMediaFrame)) currentMediaFrame = frames[0];
+
+  rail.innerHTML = frames.map((frame) => `
+    <button type="button" class="curator-thumb${frame === currentMediaFrame ? ' active' : ''}" data-frame="${frame}" aria-label="View image ${frame}">
+      <img src="${getProductImageUrl(product.code, frame, currentFeatures, 220)}" alt="${product.name} view ${frame}" loading="lazy" />
+    </button>
+  `).join('');
+
+  rail.querySelectorAll('.curator-thumb').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const frame = Number(btn.dataset.frame) || 1;
+      currentMediaFrame = frame;
+      rail.querySelectorAll('.curator-thumb').forEach((el) => {
+        el.classList.toggle('active', Number(el.dataset.frame) === frame);
+      });
+      const viewer = document.querySelector('cylindo-viewer');
+      if (viewer) {
+        viewer.setAttribute('frame', String(frame));
+        try { viewer.frame = frame; } catch (_) {}
+      }
+    });
+  });
 }
 
 function applyViewerAspectRatio(productCode) {
@@ -196,17 +234,21 @@ function renderBrand() {
   applyTheme();
   const { brand } = config;
   const darkRetail = brand.headerVariant === 'dark-retail';
+  const quinceMinimal = brand.headerVariant === 'quince-minimal' || /quince/i.test(brand.name || '');
 
   document.documentElement.classList.toggle('header-variant-dark-retail', darkRetail);
+  document.documentElement.classList.toggle('header-variant-quince', quinceMinimal);
 
   const annBlock = document.getElementById('header-announcement-block');
   const defWrap = document.getElementById('header-default-wrap');
   const drWrap = document.getElementById('header-dark-retail-wrap');
+  const inlineSearch = document.getElementById('header-search-inline');
   const hasAnnouncement = !!(brand.announcementText && String(brand.announcementText).trim());
 
   if (annBlock) annBlock.hidden = darkRetail || !hasAnnouncement;
   if (defWrap) defWrap.hidden = darkRetail;
   if (drWrap) drWrap.hidden = !darkRetail;
+  if (inlineSearch) inlineSearch.hidden = !quinceMinimal;
 
   const announcement = document.getElementById('announcement-bar');
   if (announcement) announcement.textContent = brand.announcementText || '';
@@ -228,6 +270,8 @@ function renderBrand() {
 
   const searchInput = document.getElementById('hdr-search-input');
   if (searchInput) searchInput.placeholder = brand.searchPlaceholder || 'Search';
+  const searchInlineInput = document.getElementById('hdr-search-inline-input');
+  if (searchInlineInput) searchInlineInput.placeholder = brand.searchPlaceholder || 'Search';
 
   const navDefault = document.getElementById('main-nav');
   if (navDefault) {
@@ -304,6 +348,7 @@ function renderProduct() {
   product.features.forEach(f => {
     currentFeatures[f.code] = f.options[0].value;
   });
+  currentMediaFrame = getGalleryFramesForProduct(product)[0];
 
   document.title = `${product.name} — ${config.brand.name} | Cylindo Demo`;
 
@@ -319,6 +364,7 @@ function renderProduct() {
     <cylindo-viewer
       customer-id="${cylindo.customerId}"
       code="${product.code}"
+      frame="${currentMediaFrame}"
       remote-config="${cylindo.remoteConfig}"
       presentation="gallery"
       background-color="#ffffff"
@@ -339,6 +385,7 @@ function renderProduct() {
       <span class="curator-copy">${product.name} \u00b7 ${product.code}</span>
     `;
   }
+  renderCuratorCarousel(product);
 
   // Stars
   const fullStars = Math.floor(product.rating);
@@ -448,6 +495,7 @@ function renderProduct() {
 
 function bindInteractions() {
   const viewer = document.querySelector('cylindo-viewer');
+  const product = config.products[currentProductIndex];
 
   // Fabric buttons
   document.querySelectorAll('.fabric-options').forEach(group => {
@@ -470,6 +518,7 @@ function bindInteractions() {
             const features = {};
             features[featureCode] = btn.dataset.value;
             viewer.features = features;
+            renderCuratorCarousel(product);
           } catch (e) {
             console.log('Cylindo feature update:', featureCode, btn.dataset.value);
           }
