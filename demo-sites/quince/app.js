@@ -117,11 +117,12 @@ function renderCuratorCarousel(product) {
   const rail = document.getElementById('curator-carousel');
   if (!rail || !product) return;
   const frames = getGalleryFramesForProduct(product);
+  const fallbackThumbUrl = getPlaceholderUrl(product.code);
   if (!frames.includes(currentMediaFrame)) currentMediaFrame = frames[0];
 
   rail.innerHTML = frames.map((frame) => `
     <button type="button" class="curator-thumb${frame === currentMediaFrame ? ' active' : ''}" data-frame="${frame}" aria-label="View image ${frame}">
-      <img src="${getProductImageUrl(product.code, frame, currentFeatures, 220)}" alt="${product.name} view ${frame}" loading="lazy" />
+      <img src="${getProductImageUrl(product.code, frame, currentFeatures, 220)}" alt="${product.name} view ${frame}" loading="lazy" onerror="this.onerror=null;this.src='${fallbackThumbUrl}'" />
     </button>
   `).join('');
 
