@@ -274,16 +274,29 @@ function getBrandConfig(brandName, websiteUrl) {
 
 // ---- Product Template ----
 
+function productCatalogKey(code) {
+  return (code || '').trim().replace(/[^a-zA-Z0-9]/g, '').toUpperCase();
+}
+
+const PRODUCT_CATALOG = {
+  E80I3SS: {
+    name: 'Elise 80 Inch 3 Seat Sofa',
+    price: '$3,099.99',
+    priceNote: '',
+  },
+};
+
 function buildProductEntry(productCode, features, index) {
-  const name = formatOptionName(productCode); // "Haven Comfort Arm Sofa"
+  const cat = PRODUCT_CATALOG[productCatalogKey(productCode)];
+  const name = cat?.name ?? formatOptionName(productCode);
   const id = productIdFromCode(productCode);
 
   return {
     id,
     name,
     code: productCode,
-    price: '$0.00',
-    priceNote: 'Contact for pricing',
+    price: cat?.price ?? '$0.00',
+    priceNote: cat?.priceNote ?? 'Contact for pricing',
     rating: 4.8,
     reviewCount: 0,
     description: `Explore the ${name} in full 360° with Cylindo's interactive 3D viewer. Select different options to see the product update in real-time.`,

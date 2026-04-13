@@ -337,7 +337,7 @@ function renderProduct() {
     <h1 class="product-title">${product.name}</h1>
     <div class="product-price">
       <span class="price-current">${product.price}</span>
-      <span class="price-note">${product.priceNote}</span>
+      ${product.priceNote ? `<span class="price-note">${product.priceNote}</span>` : ''}
     </div>
     <div class="product-rating">
       <div class="stars">${starsHTML}</div>
