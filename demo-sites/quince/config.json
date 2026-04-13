@@ -1,0 +1,105 @@
+{
+  "brand": {
+    "name": "Quince",
+    "logoText": "Quince",
+    "tagline": "Cylindo 3D Product Visualization Demo",
+    "website": "https://www.quince.com",
+    "announcementText": "Luxury essentials, honestly priced.",
+    "headerVariant": "quince-minimal",
+    "searchPlaceholder": "Search",
+    "navLinks": [
+      "Everyday Steals",
+      "$50 Cashmere",
+      "New Arrivals",
+      "Best Sellers",
+      "Women",
+      "Men",
+      "Home",
+      "Baby & Kids",
+      "Travel",
+      "Bags & Accessories",
+      "Jewelry",
+      "Beauty & Wellness",
+      "Gifts",
+      "The Archive"
+    ],
+    "navHighlight": "Home",
+    "footerCopyright": "Quince — Cylindo Demo",
+    "footerColumns": [
+      { "title": "Customer Care", "links": ["Contact Us", "Shipping & Returns", "FAQ", "Track Order"] },
+      { "title": "About", "links": ["Our Story", "Sustainability", "Materials", "Careers"] },
+      { "title": "Explore", "links": ["New Arrivals", "Best Sellers", "Home", "Travel"] }
+    ],
+    "theme": {
+      "fontHeading": "'Libre Baskerville', 'Georgia', serif",
+      "fontBody": "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+      "colorBg": "#ffffff",
+      "colorBgAlt": "#fafafa",
+      "colorText": "#1f2123",
+      "colorTextSecondary": "#5f656b",
+      "colorAccent": "#2f3237",
+      "colorAccentHover": "#1f2123",
+      "colorBorder": "#e4e4e4",
+      "colorSuccess": "#4a5d4a",
+      "colorAnnouncementBg": "#ea9a67",
+      "colorAnnouncementText": "#1f2123",
+      "colorHeaderBg": "#ffffff",
+      "colorHeaderBorder": "#e8e8e8",
+      "headerStickyOffset": "112px"
+    }
+  },
+  "cylindo": {
+    "customerId": "REPLACE_CYLINDO_CUSTOMER_ID",
+    "remoteConfig": "REPLACE_CURATOR_CODE"
+  },
+  "products": [
+    {
+      "id": "sierra-curved-arm-sofa",
+      "name": "Sierra Curved Arm Sofa in Performance Basketweave",
+      "code": "REPLACE_PRODUCT_CODE",
+      "price": "$1,450.00",
+      "priceNote": "Traditional retail $2,395.00",
+      "rating": 4.9,
+      "reviewCount": 128,
+      "description": "A Quince-inspired PDP demo with Cylindo 3D and a left-side image carousel. Select fabrics and finishes to view real-time updates.",
+      "badges": [{ "text": "Cylindo 3D", "type": "new" }],
+      "breadcrumb": ["Furniture", "Sierra Curved Arm Sofa In Performance Basketweave"],
+      "features": [
+        {
+          "code": "FABRIC",
+          "label": "Fabric",
+          "options": [
+            { "name": "Sage", "value": "SAGE", "swatchColor": "#a5b09c" },
+            { "name": "Vanilla", "value": "VANILLA", "swatchColor": "#f2e8cf" },
+            { "name": "Black", "value": "BLACK", "swatchColor": "#1f1f1f" },
+            { "name": "Bottle Green", "value": "BOTTLE_GREEN", "swatchColor": "#2f5f4f" }
+          ]
+        }
+      ],
+      "mediaFrames": [1, 9, 13, 17, 25],
+      "highlights": [
+        { "title": "Interactive 3D", "description": "Rotate, zoom, and inspect every angle with Cylindo's 360 viewer." },
+        { "title": "Configurable Finishes", "description": "Switch fabrics and materials with instant visual updates." },
+        { "title": "Curator Gallery", "description": "Use the left thumbnail rail to jump between preset product frames." },
+        { "title": "Tear Sheet", "description": "Generate a printable tear sheet using the current selection." },
+        { "title": "Ecommerce Ready", "description": "Drop this experience into a production PDP flow." }
+      ],
+      "specs": [
+        {
+          "group": "Product Information",
+          "items": [
+            ["Product Code", "REPLACE_PRODUCT_CODE"],
+            ["Collection", "Sierra"],
+            ["Viewer", "Cylindo Curator + Gallery"],
+            ["Notes", "Replace customerId, remoteConfig, and product code with live values"]
+          ]
+        }
+      ],
+      "faqs": [
+        { "q": "What is this page?", "a": "A Quince-style Cylindo demo page for stakeholder review." },
+        { "q": "Can I change swatches?", "a": "Yes. Swatches update both the 3D viewer and the thumbnail rail." }
+      ],
+      "leadTime": "Delivery windows vary by configuration"
+    }
+  ]
+}
