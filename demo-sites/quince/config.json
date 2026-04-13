@@ -3,7 +3,7 @@
     "name": "Quince",
     "logoText": "Quince",
     "tagline": "Cylindo 3D Product Visualization Demo",
-    "website": "https://www.quince.com",
+    "website": "https://www.quince.com/home/sierra-performance-basketweave-curved-arm-sofa?color=snow&tracker=collection_page__%2Fhome%2Fliving-room-furniture__All%20Products__0",
     "announcementText": "Luxury essentials, honestly priced.",
     "headerVariant": "quince-minimal",
     "searchPlaceholder": "Search",
@@ -49,14 +49,14 @@
     }
   },
   "cylindo": {
-    "customerId": "REPLACE_CYLINDO_CUSTOMER_ID",
-    "remoteConfig": "REPLACE_CURATOR_CODE"
+    "customerId": "4404",
+    "remoteConfig": "bg92edfs"
   },
   "products": [
     {
       "id": "sierra-curved-arm-sofa",
       "name": "Sierra Curved Arm Sofa in Performance Basketweave",
-      "code": "REPLACE_PRODUCT_CODE",
+      "code": "SIERRA CURVED ARM SOFA",
       "price": "$1,450.00",
       "priceNote": "Traditional retail $2,395.00",
       "rating": 4.9,
@@ -88,7 +88,7 @@
         {
           "group": "Product Information",
           "items": [
-            ["Product Code", "REPLACE_PRODUCT_CODE"],
+            ["Product Code", "SIERRA CURVED ARM SOFA"],
             ["Collection", "Sierra"],
             ["Viewer", "Cylindo Curator + Gallery"],
             ["Notes", "Replace customerId, remoteConfig, and product code with live values"]
