@@ -834,7 +834,7 @@ function getIndexHTML() {
 
 async function deployToVercel(projectName, files) {
   const teamParam = VERCEL_TEAM_ID ? `?teamId=${VERCEL_TEAM_ID}` : '';
-  return await httpRequest(`${VERCEL_API}/v13/deployments${teamParam}`, {
+  const result = await httpRequest(`${VERCEL_API}/v13/deployments${teamParam}`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${VERCEL_TOKEN}`, 'Content-Type': 'application/json' },
   }, JSON.stringify({
@@ -843,6 +843,21 @@ async function deployToVercel(projectName, files) {
     projectSettings: { framework: null },
     target: 'production',
   }));
+
+  // Disable Vercel Authentication on the project so demos are publicly accessible
+  if (result.status === 200 || result.status === 201) {
+    try {
+      const patchResult = await httpRequest(`${VERCEL_API}/v9/projects/${encodeURIComponent(projectName)}${teamParam}`, {
+        method: 'PATCH',
+        headers: { Authorization: `Bearer ${VERCEL_TOKEN}`, 'Content-Type': 'application/json' },
+      }, JSON.stringify({ ssoProtection: null }));
+      log('vercel', 'Disabled deployment protection for', projectName, '| status:', patchResult.status);
+    } catch (err) {
+      log('vercel', 'WARNING: Failed to disable deployment protection:', err.message);
+    }
+  }
+
+  return result;
 }
 
 // ---- Core Generation Logic ----
