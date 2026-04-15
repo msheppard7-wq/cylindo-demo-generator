@@ -181,6 +181,62 @@ function productIdFromCode(code) {
 
 function brandPresetForName(brandName) {
   const n = (brandName || '').toLowerCase().replace(/\u2019/g, "'");
+  if (n.includes('balanced body') || n.includes('balancedbody') || n.includes('pilates')) {
+    return {
+      logoText: 'balanced body',
+      headerVariant: 'balanced-body',
+      announcementText: "Pilates On Tour: Taiwan | Extra Early Bird Pricing! | Learn More.",
+      searchPlaceholder: 'Search',
+      navLinks: ['Shop', 'Move', 'Learn'],
+      navHighlight: 'Shop',
+      theme: {
+        fontHeading: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+        fontBody: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+        colorBg: '#ffffff',
+        colorBgAlt: '#f7f8fa',
+        colorText: '#1f2228',
+        colorTextSecondary: '#5c6370',
+        colorAccent: '#0f2b54',
+        colorAccentHover: '#0b2140',
+        colorBorder: '#e1e5eb',
+        colorSuccess: '#4a5d4a',
+        colorAnnouncementBg: '#0f2b54',
+        colorAnnouncementText: '#ffffff',
+        colorHeaderBg: '#ffffff',
+        colorHeaderBorder: '#e8ebef',
+        headerStickyOffset: '88px'
+      }
+    };
+  }
+  if (n.includes('lightology')) {
+    return {
+      logoText: 'Lightology',
+      headerVariant: 'lightology',
+      announcementText: 'ARTFUL SHAPES, BOLD TEXTURES | SHOP NEW ARRIVALS',
+      searchPlaceholder: 'Search',
+      navLinks: [
+        'Lighting', 'Fans', 'Furniture', 'Room', 'Brands', 'Inspiration', 'Sale'
+      ],
+      navHighlight: 'Furniture',
+      theme: {
+        fontHeading: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+        fontBody: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+        colorBg: '#ffffff',
+        colorBgAlt: '#f8f8f8',
+        colorText: '#22242a',
+        colorTextSecondary: '#5e646b',
+        colorAccent: '#1f2530',
+        colorAccentHover: '#0f1724',
+        colorBorder: '#e3e6ea',
+        colorSuccess: '#4a5d4a',
+        colorAnnouncementBg: '#2f3850',
+        colorAnnouncementText: '#ffffff',
+        colorHeaderBg: '#ffffff',
+        colorHeaderBorder: '#e8ebef',
+        headerStickyOffset: '104px'
+      }
+    };
+  }
   if (!n.includes('haverty')) return null;
   return {
     logoText: 'HAVERTYS',

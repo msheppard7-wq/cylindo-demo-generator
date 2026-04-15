@@ -247,9 +247,13 @@ function renderBrand() {
   const { brand } = config;
   const darkRetail = brand.headerVariant === 'dark-retail';
   const quinceMinimal = brand.headerVariant === 'quince-minimal' || /quince/i.test(brand.name || '');
+  const lightology = brand.headerVariant === 'lightology';
+  const balancedBody = brand.headerVariant === 'balanced-body';
 
   document.documentElement.classList.toggle('header-variant-dark-retail', darkRetail);
   document.documentElement.classList.toggle('header-variant-quince', quinceMinimal);
+  document.documentElement.classList.toggle('header-variant-lightology', lightology);
+  document.documentElement.classList.toggle('header-variant-balanced-body', balancedBody);
 
   const annBlock = document.getElementById('header-announcement-block');
   const defWrap = document.getElementById('header-default-wrap');

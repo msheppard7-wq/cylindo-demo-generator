@@ -908,6 +908,158 @@ html.header-variant-quince .fabric-btn.active {
   box-shadow: 0 0 0 2px #fff, 0 0 0 3px #2f3237;
 }
 
+html.header-variant-lightology {
+  --font-heading: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --color-bg: #ffffff;
+  --color-bg-alt: #f8f8f8;
+  --color-text: #22242a;
+  --color-text-secondary: #5e646b;
+  --color-accent: #1f2530;
+  --color-accent-hover: #0f1724;
+  --color-border: #e3e6ea;
+  --announcement-bg: #2f3850;
+  --announcement-text: #ffffff;
+  --header-sticky-offset: 104px;
+}
+
+html.header-variant-lightology .header-announcement {
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 4px 12px;
+  border-bottom: none;
+}
+
+html.header-variant-lightology .header-main-inner {
+  min-height: 64px;
+  gap: 22px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+html.header-variant-lightology .logo {
+  font-family: 'Libre Baskerville', 'Georgia', serif;
+  font-size: 40px;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+
+html.header-variant-lightology .main-nav {
+  justify-content: flex-start;
+  gap: 8px 26px;
+}
+
+html.header-variant-lightology .main-nav a {
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+html.header-variant-lightology .header-icon-link {
+  color: #4a4f56;
+}
+
+html.header-variant-lightology .header-icon-link:hover {
+  opacity: 1;
+  color: #20242b;
+}
+
+html.header-variant-balanced-body {
+  --font-heading: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --color-bg: #ffffff;
+  --color-bg-alt: #f7f8fa;
+  --color-text: #1f2228;
+  --color-text-secondary: #5c6370;
+  --color-accent: #0f2b54;
+  --color-accent-hover: #0b2140;
+  --color-border: #e1e5eb;
+  --announcement-bg: #0f2b54;
+  --announcement-text: #ffffff;
+  --header-sticky-offset: 88px;
+}
+
+html.header-variant-balanced-body .header-announcement {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  padding: 5px 12px;
+  border-bottom: none;
+}
+
+html.header-variant-balanced-body .header-main-inner {
+  min-height: 56px;
+  gap: 18px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+html.header-variant-balanced-body .logo {
+  font-family: var(--font-body);
+  font-size: 33px;
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+html.header-variant-balanced-body .main-nav {
+  justify-content: center;
+  gap: 8px 30px;
+}
+
+html.header-variant-balanced-body .main-nav a {
+  font-size: 14px;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+html.header-variant-balanced-body .curator-meta {
+  display: none;
+}
+
+html.header-variant-balanced-body .configurator-block {
+  border: 1px solid var(--color-border);
+  background: #fbfcfd;
+  padding: 14px 14px 6px;
+}
+
+html.header-variant-balanced-body .option-group {
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+html.header-variant-balanced-body .option-group:last-child {
+  border-bottom: none;
+}
+
+html.header-variant-balanced-body .option-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #525a66;
+}
+
+html.header-variant-balanced-body .option-value-label {
+  font-size: 13px;
+  color: #262b33;
+}
+
+html.header-variant-balanced-body .fabric-options {
+  justify-content: flex-start;
+  padding-left: 0;
+  gap: 8px 8px;
+}
+
+html.header-variant-balanced-body .fabric-btn {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border-width: 1px;
+}
+
+html.header-variant-balanced-body .fabric-btn.active {
+  box-shadow: 0 0 0 2px #fff, 0 0 0 3px #202733;
+}
+
 .fabric-btn:hover { border-color: var(--color-text-secondary); }
 
 .fabric-btn.active {
