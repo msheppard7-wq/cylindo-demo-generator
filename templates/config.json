@@ -2,6 +2,8 @@
   "brand": {
     "name": "Serena & Lily",
     "logoText": "Serena & Lily",
+    "logoImageUrl": "assets/serena-lily-logo.png",
+    "swatchShape": "square",
     "tagline": "A Fresh Approach to Home",
     "website": "https://www.serenaandlily.com",
     "announcementText": "Cylindo 3D Product Visualization Demo — Serena & Lily",

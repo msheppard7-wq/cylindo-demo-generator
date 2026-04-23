@@ -27,6 +27,7 @@
   --header-sticky-offset: 104px;
   --btn-radius: 4px;
   --card-radius: 8px;
+  --swatch-radius: 50%;
   --configurator-max-width: 440px;
   --header-dark-bg: #2c3138;
   --header-dark-border: #3d444d;
@@ -245,6 +246,10 @@ body {
   display: none;
   background: var(--header-dark-bg);
   color: var(--header-dark-text);
+}
+
+html.header-variant-dark-retail {
+  --swatch-radius: 6px;
 }
 
 html.header-variant-dark-retail .header-dark-retail-wrap {
@@ -468,7 +473,7 @@ html.header-variant-dark-retail .option-value-label {
 html.header-variant-dark-retail .fabric-btn {
   width: 56px;
   height: 56px;
-  border-radius: 6px;
+  border-radius: var(--swatch-radius);
   padding: 3px;
   border: 1px solid var(--color-border);
   background: var(--color-bg);
@@ -797,7 +802,7 @@ html.header-variant-dark-retail .qty-input {
   width: 52px;
   height: 52px;
   border: 1px solid var(--color-border);
-  border-radius: 50%;
+  border-radius: var(--swatch-radius);
   background: var(--color-bg-alt);
   padding: 2px;
   overflow: hidden;
@@ -814,7 +819,7 @@ html.header-variant-dark-retail .qty-input {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  border-radius: 50%;
+  border-radius: var(--swatch-radius);
 }
 
 .fabric-btn.color-swatch {
@@ -825,7 +830,7 @@ html.header-variant-dark-retail .qty-input {
 .fabric-color-chip {
   width: 100%;
   height: 100%;
-  border-radius: 50%;
+  border-radius: var(--swatch-radius);
   border: 1px solid rgba(0, 0, 0, 0.12);
 }
 

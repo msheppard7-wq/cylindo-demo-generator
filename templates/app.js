@@ -230,6 +230,13 @@ function applyTheme() {
   set('--header-dark-muted', t.colorHeaderDarkMuted);
   set('--nav-sale-accent', t.colorNavSaleAccent);
   if (t.headerStickyOffset) set('--header-sticky-offset', t.headerStickyOffset);
+
+  // Swatch shape override (config.brand.swatchShape: 'circle' | 'square' | 'rounded')
+  const shapeMap = { circle: '50%', square: '0', rounded: '6px' };
+  const shape = config.brand.swatchShape;
+  if (shape && shapeMap[shape]) {
+    r.style.setProperty('--swatch-radius', shapeMap[shape]);
+  }
 }
 
 function buildLogoMarkup(brand) {

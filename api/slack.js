@@ -473,7 +473,7 @@ async function slackUpdateMessage(channel, ts, text, blocks) {
 
 // ---- Status Tracker Blocks ----
 
-function buildTrackerBlocks({ brandName, customerId, curatorCode, productCodes, brandUrl, userId, status, statusEmoji, statusDetail, demoUrl, errorMessage, statusParts }) {
+function buildTrackerBlocks({ brandName, customerId, curatorCode, productCodes, brandUrl, userId, status, statusEmoji, statusDetail, demoUrl, errorMessage, statusParts, screenshotUrl }) {
   const blocks = [
     {
       type: 'header',
@@ -494,6 +494,16 @@ function buildTrackerBlocks({ brandName, customerId, curatorCode, productCodes, 
     },
     { type: 'divider' },
   ];
+
+  // Embed reference screenshot at the top if provided (must be a public https URL, not a files.slack.com link)
+  if (screenshotUrl && /^https:\/\//i.test(screenshotUrl) && !screenshotUrl.includes('files.slack.com')) {
+    blocks.splice(1, 0, {
+      type: 'image',
+      image_url: screenshotUrl,
+      alt_text: 'Reference target header',
+      title: { type: 'plain_text', text: 'Reference: target site header' },
+    });
+  }
 
   let statusText = `${statusEmoji} *Status: ${status}*`;
   if (statusDetail) statusText += `\n${statusDetail}`;
@@ -621,6 +631,55 @@ async function openModal(triggerId, channelId) {
           type: 'url_text_input',
           action_id: 'value',
           placeholder: { type: 'plain_text', text: 'https://jamesandjamesfurniture.com/products/everly-side-chair' },
+        },
+      },
+      {
+        type: 'input',
+        block_id: 'screenshot_url',
+        label: { type: 'plain_text', text: 'Reference Screenshot URL (optional)' },
+        hint: { type: 'plain_text', text: 'Public image URL of the target site\'s header (Imgur, public CDN, or Slack "Create public link"). Shown in the tracker for side-by-side comparison. Note: files.slack.com URLs require auth and will be skipped.' },
+        optional: true,
+        element: {
+          type: 'url_text_input',
+          action_id: 'value',
+          placeholder: { type: 'plain_text', text: 'https://i.imgur.com/example.png' },
+        },
+      },
+      {
+        type: 'input',
+        block_id: 'swatch_shape',
+        label: { type: 'plain_text', text: 'Swatch Shape (optional)' },
+        hint: { type: 'plain_text', text: 'Override the fabric/material swatch shape. Leave as Auto to use the default for the chosen header.' },
+        optional: true,
+        element: {
+          type: 'static_select',
+          action_id: 'value',
+          placeholder: { type: 'plain_text', text: 'Auto' },
+          options: [
+            { text: { type: 'plain_text', text: 'Auto' },          value: 'auto' },
+            { text: { type: 'plain_text', text: 'Circle' },        value: 'circle' },
+            { text: { type: 'plain_text', text: 'Square' },        value: 'square' },
+            { text: { type: 'plain_text', text: 'Rounded (6px)' }, value: 'rounded' },
+          ],
+        },
+      },
+      {
+        type: 'input',
+        block_id: 'header_variant',
+        label: { type: 'plain_text', text: 'Header Style (optional)' },
+        hint: { type: 'plain_text', text: 'Override the header layout. Auto uses the brand preset if one exists, otherwise the default light single-bar header.' },
+        optional: true,
+        element: {
+          type: 'static_select',
+          action_id: 'value',
+          placeholder: { type: 'plain_text', text: 'Auto' },
+          options: [
+            { text: { type: 'plain_text', text: 'Auto' },                          value: 'auto' },
+            { text: { type: 'plain_text', text: 'Default (light single-bar)' },    value: 'default' },
+            { text: { type: 'plain_text', text: 'Dark Retail (Havertys-style)' },  value: 'dark-retail' },
+            { text: { type: 'plain_text', text: 'Lightology' },                    value: 'lightology' },
+            { text: { type: 'plain_text', text: 'Quince Minimal' },                value: 'quince-minimal' },
+          ],
         },
       },
     ],
@@ -766,11 +825,23 @@ function brandPresetForName(brandName) {
   };
 }
 
-function buildConfig(customerId, curatorCode, brandName, brandUrl, products, scraped) {
+function buildConfig(customerId, curatorCode, brandName, brandUrl, products, scraped, overrides = {}) {
   const preset = brandPresetForName(brandName) || {};
   const presetTheme = preset.theme || {};
   const scrapedTheme = (scraped && scraped.theme) || {};
   const { theme: _t, ...presetRest } = preset;
+
+  // Manual override precedence: user dropdown (if not 'auto') > preset > default
+  // Map 'default' → undefined so user can explicitly opt out of any preset variant.
+  const resolvedHeaderVariant =
+    (overrides.headerVariant && overrides.headerVariant !== 'auto')
+      ? (overrides.headerVariant === 'default' ? undefined : overrides.headerVariant)
+      : preset.headerVariant;
+
+  const resolvedSwatchShape =
+    (overrides.swatchShape && overrides.swatchShape !== 'auto')
+      ? overrides.swatchShape
+      : undefined;
 
   // Layer: defaults → scraped from URL → manual preset (preset wins)
   const theme = {
@@ -818,6 +889,9 @@ function buildConfig(customerId, curatorCode, brandName, brandUrl, products, scr
         { title: 'Explore', links: ['New Arrivals', 'Best Sellers', 'Collections', 'Inspiration'] },
       ],
       ...presetRest,
+      // Manual overrides win over preset — assigned after spread so they take precedence
+      headerVariant: resolvedHeaderVariant,
+      swatchShape: resolvedSwatchShape,
       theme,
     },
     cylindo: { customerId, remoteConfig: curatorCode },
@@ -918,10 +992,14 @@ async function deployToVercel(projectName, files) {
 
 // ---- Core Generation Logic ----
 
-async function generateDemo({ customerId, productCodes, curatorCode, brandName, brandUrl, onStatusUpdate }) {
-  log('gen', 'Starting for', brandName, '| products:', productCodes.join(', '));
+async function generateDemo({ customerId, productCodes, curatorCode, brandName, brandUrl, swatchShape, headerVariant, onStatusUpdate }) {
+  log('gen', 'Starting for', brandName, '| products:', productCodes.join(', '), '| swatch:', swatchShape || 'auto', '| header:', headerVariant || 'auto');
   const products = [];
   const statusParts = [];
+
+  // Log active manual overrides in the tracker so reviewers see what was applied
+  if (swatchShape && swatchShape !== 'auto') statusParts.push(`\u2022 *Swatch shape override:* ${swatchShape}`);
+  if (headerVariant && headerVariant !== 'auto') statusParts.push(`\u2022 *Header override:* ${headerVariant}`);
 
   // Start brand scrape in parallel with product fetches
   if (onStatusUpdate) await onStatusUpdate(':mag: Analyzing brand website & fetching product data...');
@@ -951,7 +1029,7 @@ async function generateDemo({ customerId, productCodes, curatorCode, brandName, 
     statusParts.push(`\u2022 *Brand style:* Using default theme`);
   }
 
-  const config = buildConfig(customerId, curatorCode, brandName, brandUrl, products, scraped);
+  const config = buildConfig(customerId, curatorCode, brandName, brandUrl, products, scraped, { swatchShape, headerVariant });
 
   // Read template files
   const fs = require('fs');
@@ -1007,9 +1085,9 @@ async function generateDemo({ customerId, productCodes, curatorCode, brandName, 
 
 // ---- Generation with Status Tracker ----
 
-async function runGenerationWithTracker({ customerId, productCodes, curatorCode, brandName, brandUrl, userId, channelId }) {
+async function runGenerationWithTracker({ customerId, productCodes, curatorCode, brandName, brandUrl, userId, channelId, screenshotUrl, swatchShape, headerVariant }) {
   const channel = channelId || DEMO_CHANNEL;
-  const trackerParams = { brandName, customerId, curatorCode, productCodes, brandUrl, userId };
+  const trackerParams = { brandName, customerId, curatorCode, productCodes, brandUrl, userId, screenshotUrl };
 
   // 1. Post initial "Submitted" message
   let messageTs = null;
@@ -1050,7 +1128,7 @@ async function runGenerationWithTracker({ customerId, productCodes, curatorCode,
         await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
       }
 
-      const result = await generateDemo({ customerId, productCodes, curatorCode, brandName, brandUrl, onStatusUpdate });
+      const result = await generateDemo({ customerId, productCodes, curatorCode, brandName, brandUrl, swatchShape, headerVariant, onStatusUpdate });
 
       // Success — update tracker to "Created"
       await slackUpdateMessage(channel, messageTs, `Demo ready: ${brandName}`,
@@ -1191,6 +1269,11 @@ const slackFetchHandler = {
         const brandName = values.brand_name.value.value.trim();
         const brandUrl = values.brand_url?.value?.value?.trim() || '';
 
+        // Optional brand-matching overrides (static_select uses .selected_option.value, not .value.value)
+        const screenshotUrl = values.screenshot_url?.value?.value?.trim() || '';
+        const swatchShape   = values.swatch_shape?.value?.selected_option?.value || 'auto';
+        const headerVariant = values.header_variant?.value?.selected_option?.value || 'auto';
+
         let channelId = DEMO_CHANNEL;
         try {
           const meta = JSON.parse(payload.view.private_metadata || '{}');
@@ -1199,11 +1282,12 @@ const slackFetchHandler = {
 
         const productCodes = productCodesRaw.split(',').map((p) => p.trim()).filter(Boolean);
 
-        log('submit', 'Modal submitted by', payload.user?.name, '| brand:', brandName, '| products:', productCodes.join(', '));
+        log('submit', 'Modal submitted by', payload.user?.name, '| brand:', brandName, '| products:', productCodes.join(', '), '| swatch:', swatchShape, '| header:', headerVariant, '| screenshot:', screenshotUrl ? 'yes' : 'no');
 
         waitUntil(
           runGenerationWithTracker({
             customerId, productCodes, curatorCode, brandName, brandUrl, userId, channelId,
+            screenshotUrl, swatchShape, headerVariant,
           }).catch((err) => {
             log('waitUntil', 'runGenerationWithTracker rejected:', err.message, err.stack);
           })
