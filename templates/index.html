@@ -15,11 +15,26 @@
 
   <header class="site-header" id="site-header">
     <div class="header-announcement" id="header-announcement-block">
-      <div class="container header-announcement-inner" id="announcement-bar"></div>
+      <div class="container header-announcement-inner">
+        <button class="ann-nav ann-nav-prev" type="button" aria-label="Previous announcement">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div class="ann-text" id="announcement-bar"></div>
+        <button class="ann-nav ann-nav-next" type="button" aria-label="Next announcement">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
     </div>
 
     <!-- Default (light) single-bar header -->
     <div class="header-default-wrap" id="header-default-wrap">
+      <!-- Utility strip (shown for serena-lily variant) -->
+      <div class="hdr-utility" id="hdr-utility-bar" hidden>
+        <div class="container hdr-utility-inner">
+          <nav class="hdr-utility-left" id="hdr-utility-left" aria-label="Utility left"></nav>
+          <nav class="hdr-utility-right" id="hdr-utility-right" aria-label="Utility right"></nav>
+        </div>
+      </div>
       <div class="header-main">
         <div class="header-main-inner container">
           <button class="menu-btn menu-btn--default" type="button" aria-label="Open menu">

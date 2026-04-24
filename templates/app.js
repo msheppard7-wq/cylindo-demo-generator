@@ -113,26 +113,31 @@ function getGalleryFramesForProduct(product) {
   return valid.length ? valid : [1];
 }
 
-function renderCuratorCarousel(product) {
+function renderCuratorCarousel(product, featureSelections) {
   const rail = document.getElementById('curator-carousel');
   if (!rail || !product) return;
   const frames = getGalleryFramesForProduct(product);
   const fallbackThumbUrl = getPlaceholderUrl(product.code);
   if (!frames.includes(currentMediaFrame)) currentMediaFrame = frames[0];
 
-  // Thumbnails: omit feature params so angles resolve from Content API. Demo-only swatch
-  // values (e.g. FABRIC:SAGE) are not guaranteed to exist on the real SKU and can 404.
+  // Prefer feature-aware thumbs so the left rail updates as selections change.
+  // If a frame/feature combo is unavailable, each thumbnail falls back to a no-feature URL.
   rail.innerHTML = frames.map((frame) => `
     <button type="button" class="curator-thumb${frame === currentMediaFrame ? ' active' : ''}" data-frame="${frame}" aria-label="View image ${frame}">
-      <img src="${getProductImageUrl(product.code, frame, null, 220)}" alt="${product.name} — view ${frame}" loading="lazy" decoding="async" />
+      <img src="${getProductImageUrl(product.code, frame, featureSelections || null, 220)}" data-fallback-src="${getProductImageUrl(product.code, frame, null, 220)}" alt="${product.name} — view ${frame}" loading="lazy" decoding="async" />
     </button>
   `).join('');
 
   rail.querySelectorAll('.curator-thumb img').forEach((img) => {
     img.addEventListener('error', function onThumbError() {
+      if (!img.dataset.fallbackApplied && img.dataset.fallbackSrc) {
+        img.dataset.fallbackApplied = '1';
+        img.src = img.dataset.fallbackSrc;
+        return;
+      }
       img.removeEventListener('error', onThumbError);
-      if (img.dataset.fallbackApplied) return;
-      img.dataset.fallbackApplied = '1';
+      if (img.dataset.placeholderApplied) return;
+      img.dataset.placeholderApplied = '1';
       img.src = fallbackThumbUrl;
     });
   });
@@ -256,16 +261,19 @@ function renderBrand() {
   const quinceMinimal = brand.headerVariant === 'quince-minimal' || /quince/i.test(brand.name || '');
   const lightology = brand.headerVariant === 'lightology';
   const balancedBody = brand.headerVariant === 'balanced-body';
+  const serenaLily = brand.headerVariant === 'serena-lily' || /serena\s*&\s*lily/i.test(brand.name || '');
 
   document.documentElement.classList.toggle('header-variant-dark-retail', darkRetail);
   document.documentElement.classList.toggle('header-variant-quince', quinceMinimal);
   document.documentElement.classList.toggle('header-variant-lightology', lightology);
   document.documentElement.classList.toggle('header-variant-balanced-body', balancedBody);
+  document.documentElement.classList.toggle('header-variant-serena-lily', serenaLily);
 
   const annBlock = document.getElementById('header-announcement-block');
   const defWrap = document.getElementById('header-default-wrap');
   const drWrap = document.getElementById('header-dark-retail-wrap');
   const inlineSearch = document.getElementById('header-search-inline');
+  const utilityBar = document.getElementById('hdr-utility-bar');
   const hasAnnouncement = !!(brand.announcementText && String(brand.announcementText).trim());
 
   if (annBlock) annBlock.hidden = darkRetail || !hasAnnouncement;
@@ -273,8 +281,27 @@ function renderBrand() {
   if (drWrap) drWrap.hidden = !darkRetail;
   if (inlineSearch) inlineSearch.hidden = !quinceMinimal;
 
+  // Utility strip — shown when brand has utility link lists (currently used by Serena & Lily variant)
+  const utilityLeft = (brand.utilityLinksLeft || []);
+  const utilityRight = (brand.utilityLinksRight || []);
+  const showUtility = serenaLily && (utilityLeft.length || utilityRight.length);
+  if (utilityBar) utilityBar.hidden = !showUtility;
+  const utilLeftNav = document.getElementById('hdr-utility-left');
+  const utilRightNav = document.getElementById('hdr-utility-right');
+  if (utilLeftNav) utilLeftNav.innerHTML = utilityLeft.map((l) => `<a href="#">${l}</a>`).join('');
+  if (utilRightNav) utilRightNav.innerHTML = utilityRight.map((l) => `<a href="#">${l}</a>`).join('');
+
   const announcement = document.getElementById('announcement-bar');
-  if (announcement) announcement.textContent = brand.announcementText || '';
+  if (announcement) {
+    const annText = brand.announcementText || '';
+    const ctaText = brand.announcementCtaText;
+    // For S&L, render a "SHOP NOW"-style underlined link alongside the announcement text
+    if (serenaLily && ctaText) {
+      announcement.innerHTML = `<span>${annText}</span><a href="#" class="shop-now">${ctaText}</a>`;
+    } else {
+      announcement.textContent = annText;
+    }
+  }
 
   const logoDefault = document.getElementById('logo-default');
   const logoDr = document.getElementById('logo-dark-retail');
@@ -408,7 +435,7 @@ function renderProduct() {
       <span class="curator-copy">${product.name} \u00b7 ${product.code}</span>
     `;
   }
-  renderCuratorCarousel(product);
+  renderCuratorCarousel(product, currentFeatures);
 
   // Stars
   const fullStars = Math.floor(product.rating);
@@ -541,7 +568,7 @@ function bindInteractions() {
             const features = {};
             features[featureCode] = btn.dataset.value;
             viewer.features = features;
-            renderCuratorCarousel(product);
+            renderCuratorCarousel(product, currentFeatures);
           } catch (e) {
             console.log('Cylindo feature update:', featureCode, btn.dataset.value);
           }
