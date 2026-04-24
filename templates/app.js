@@ -68,27 +68,9 @@ function getOptionSwatchColor(option) {
 }
 
 function getFallbackSwatchColorByName(optionName) {
-  if (!optionName) return '';
-  const normalized = String(optionName).trim().toLowerCase();
-  const map = {
-    sage: '#a5b09c',
-    vanilla: '#f2e8cf',
-    black: '#1f1f1f',
-    'bottle green': '#2f5f4f',
-    green: '#6e8f74',
-    white: '#f8f8f6',
-    ivory: '#f4efe3',
-    cream: '#efe5d2',
-    gray: '#8a8f95',
-    grey: '#8a8f95',
-    charcoal: '#4d5257',
-    navy: '#2e405e',
-    blue: '#6a7f9f',
-    brown: '#7a5b45',
-    tan: '#b99b7a',
-    beige: '#cfc2aa'
-  };
-  return map[normalized] || '';
+  // Intentionally disabled for accuracy: guessed colors can diverge from
+  // the latest published Cylindo material swatches.
+  return '';
 }
 
 function buildSwatchButtonMarkup(productCode, feature, option, isActive) {
@@ -98,6 +80,48 @@ function buildSwatchButtonMarkup(productCode, feature, option, isActive) {
     ? `<span class="fabric-color-chip" style="background:${swatchColor}"></span>`
     : `<img src="${getSwatchUrl(productCode, feature.code, option.value, 200)}" alt="${option.name}" loading="lazy" onerror="this.style.display='none'; this.parentElement.classList.add('fallback')">`;
   return `<button type="button" class="${classes}" data-value="${option.value}" data-name="${option.name}" aria-label="${feature.label}: ${option.name}" title="${option.name}">${colorMarkup}</button>`;
+}
+
+async function fetchLatestProductConfiguration(productCode) {
+  const url = getContentAPIUrl(productCode, 'configuration');
+  const response = await fetch(url, { headers: { Accept: 'application/json' } });
+  if (!response.ok) return null;
+  try {
+    return await response.json();
+  } catch (_) {
+    return null;
+  }
+}
+
+function normalizeFeatureOptionsFromConfiguration(configData) {
+  const incoming = Array.isArray(configData?.features) ? configData.features : [];
+  return incoming.map((feature) => {
+    const code = feature.code || feature.name || 'UNKNOWN';
+    const label = feature.name || code;
+    const options = Array.isArray(feature.options)
+      ? feature.options.map((opt) => {
+          const value = opt.code || opt.name || String(opt);
+          const name = opt.name || opt.code || String(opt);
+          return { name, value };
+        }).filter((opt) => opt.value)
+      : [];
+    return { code, label, options };
+  }).filter((feature) => feature.options.length);
+}
+
+async function refreshProductsFromPublishedConfiguration() {
+  const products = Array.isArray(config?.products) ? config.products : [];
+  for (const product of products) {
+    try {
+      const latestConfig = await fetchLatestProductConfiguration(product.code);
+      const latestFeatures = normalizeFeatureOptionsFromConfiguration(latestConfig);
+      if (latestFeatures.length) {
+        product.features = latestFeatures;
+      }
+    } catch (_) {
+      // Keep configured fallback if API fetch fails.
+    }
+  }
 }
 
 function getPlaceholderUrl(productCode) {
@@ -757,6 +781,7 @@ window.addEventListener('popstate', () => {
 // ---- Initialize ----
 document.addEventListener('DOMContentLoaded', async () => {
   await loadConfig();
+  await refreshProductsFromPublishedConfiguration();
   currentProductIndex = getProductFromURL();
   renderBrand();
   renderProductSwitcher();
