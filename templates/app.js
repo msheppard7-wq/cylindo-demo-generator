@@ -270,10 +270,13 @@ function applyTheme() {
 
 function buildLogoMarkup(brand) {
   if (brand.logoImageUrl) {
+    const textMarkup = brand.logoTextVisible
+      ? `<span class="logo-wordmark">${brand.logoText || brand.name}</span>`
+      : '';
     if (brand.logoImageUrlDark) {
-      return `<picture class="logo-picture"><source srcset="${brand.logoImageUrlDark}" media="(prefers-color-scheme: dark)" /><img src="${brand.logoImageUrl}" alt="${brand.name}" class="logo-image" /></picture>`;
+      return `<picture class="logo-picture"><source srcset="${brand.logoImageUrlDark}" media="(prefers-color-scheme: dark)" /><img src="${brand.logoImageUrl}" alt="${brand.name}" class="logo-image" /></picture>${textMarkup}`;
     }
-    return `<img src="${brand.logoImageUrl}" alt="${brand.name}" class="logo-image" />`;
+    return `<img src="${brand.logoImageUrl}" alt="${brand.name}" class="logo-image" />${textMarkup}`;
   }
   return '';
 }
@@ -286,12 +289,14 @@ function renderBrand() {
   const lightology = brand.headerVariant === 'lightology';
   const balancedBody = brand.headerVariant === 'balanced-body';
   const serenaLily = brand.headerVariant === 'serena-lily' || /serena\s*&\s*lily/i.test(brand.name || '');
+  const maineCottage = brand.headerVariant === 'maine-cottage' || /maine\s*cottage/i.test(brand.name || '');
 
   document.documentElement.classList.toggle('header-variant-dark-retail', darkRetail);
   document.documentElement.classList.toggle('header-variant-quince', quinceMinimal);
   document.documentElement.classList.toggle('header-variant-lightology', lightology);
   document.documentElement.classList.toggle('header-variant-balanced-body', balancedBody);
   document.documentElement.classList.toggle('header-variant-serena-lily', serenaLily);
+  document.documentElement.classList.toggle('header-variant-maine-cottage', maineCottage);
 
   const annBlock = document.getElementById('header-announcement-block');
   const defWrap = document.getElementById('header-default-wrap');
@@ -308,7 +313,7 @@ function renderBrand() {
   // Utility strip — shown when brand has utility link lists (currently used by Serena & Lily variant)
   const utilityLeft = (brand.utilityLinksLeft || []);
   const utilityRight = (brand.utilityLinksRight || []);
-  const showUtility = serenaLily && (utilityLeft.length || utilityRight.length);
+  const showUtility = (serenaLily || maineCottage) && (utilityLeft.length || utilityRight.length);
   if (utilityBar) utilityBar.hidden = !showUtility;
   const utilLeftNav = document.getElementById('hdr-utility-left');
   const utilRightNav = document.getElementById('hdr-utility-right');

@@ -129,6 +129,16 @@ body {
   justify-content: center;
 }
 
+.logo-wordmark {
+  font-family: var(--font-heading);
+  font-size: 18px;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--color-text);
+  margin-left: 10px;
+}
+
 .main-nav {
   flex: 1;
   display: flex;
@@ -1236,6 +1246,11 @@ html.header-variant-serena-lily .logo-image {
   max-height: 34px;
 }
 
+html.header-variant-serena-lily .logo-wordmark {
+  font-size: 30px;
+  letter-spacing: 0.05em;
+}
+
 html.header-variant-serena-lily .header-actions {
   grid-area: right;
   justify-self: end;
@@ -1280,6 +1295,93 @@ html.header-variant-serena-lily .main-nav a.nav-highlight {
 html.header-variant-serena-lily .cart-link .cart-count {
   background: var(--color-accent);
   color: var(--header-bg);
+}
+
+/* ---- Maine Cottage variant: slim promo strip + minimal single-row nav ---- */
+html.header-variant-maine-cottage {
+  --font-heading: 'Libre Baskerville', 'Georgia', serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --color-bg: #ffffff;
+  --color-bg-alt: #f8f8f8;
+  --color-text: #2f3f50;
+  --color-text-secondary: #778392;
+  --color-accent: #7c92ad;
+  --color-accent-hover: #607892;
+  --color-border: #e6e9ee;
+  --announcement-bg: #7f9fc5;
+  --announcement-text: #ffffff;
+  --header-bg: #ffffff;
+  --header-border: #eef1f4;
+  --header-sticky-offset: 92px;
+}
+
+html.header-variant-maine-cottage .hdr-utility {
+  display: none !important;
+}
+
+html.header-variant-maine-cottage .header-announcement {
+  font-size: 11px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  padding: 8px 16px;
+  border-bottom: none;
+}
+
+html.header-variant-maine-cottage .header-main-inner {
+  gap: 20px;
+  min-height: 74px;
+  padding-top: 14px;
+  padding-bottom: 10px;
+}
+
+html.header-variant-maine-cottage .menu-btn--default {
+  display: none;
+}
+
+html.header-variant-maine-cottage .logo {
+  font-family: 'Brush Script MT', 'Segoe Script', 'Bradley Hand', cursive;
+  font-size: 44px;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: #2f4962;
+  text-transform: none;
+}
+
+html.header-variant-maine-cottage .main-nav {
+  justify-content: center;
+  gap: 8px 24px;
+}
+
+html.header-variant-maine-cottage .main-nav a {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #4e5f71;
+}
+
+html.header-variant-maine-cottage .main-nav a:hover,
+html.header-variant-maine-cottage .main-nav a.nav-highlight {
+  color: #8096ae;
+}
+
+html.header-variant-maine-cottage .header-actions {
+  gap: 8px;
+}
+
+html.header-variant-maine-cottage .header-icon-link {
+  color: #607285;
+}
+
+html.header-variant-maine-cottage .header-icon-link:hover {
+  opacity: 1;
+  color: #415365;
+}
+
+html.header-variant-maine-cottage .cart-link .cart-count {
+  background: #607892;
+  color: #ffffff;
 }
 
 .fabric-btn:hover { border-color: var(--color-text-secondary); }
