@@ -679,6 +679,7 @@ async function openModal(triggerId, channelId) {
             { text: { type: 'plain_text', text: 'Dark Retail (Havertys-style)' },  value: 'dark-retail' },
             { text: { type: 'plain_text', text: 'Lightology' },                    value: 'lightology' },
             { text: { type: 'plain_text', text: 'Quince Minimal' },                value: 'quince-minimal' },
+            { text: { type: 'plain_text', text: 'Serena & Lily' },                 value: 'serena-lily' },
           ],
         },
       },
@@ -781,6 +782,42 @@ function brandPresetForName(brandName) {
         colorHeaderBg: '#ffffff',
         colorHeaderBorder: '#e8ebef',
         headerStickyOffset: '104px',
+      },
+    };
+  }
+  if (n.includes('serena') && n.includes('lily')) {
+    return {
+      logoText: 'SERENA & LILY',
+      logoImageUrl: 'assets/serena-lily-logo.png',
+      swatchShape: 'square',
+      headerVariant: 'serena-lily',
+      announcementText: "The Mother's Day Edit",
+      announcementCtaText: 'SHOP NOW',
+      searchPlaceholder: 'Search',
+      utilityLinksLeft: ['Ideas', 'Library', 'Shop by Room', 'Digital Catalog'],
+      utilityLinksRight: ['Trade', 'Find a Shop', 'Design Advice'],
+      navLinks: [
+        'New', 'Furniture', 'Outdoor', 'Bedding', 'Bath', 'Rugs', 'Lighting',
+        'Wallpaper', 'Pillows & Throws', 'D\u00e9cor & Mirrors', 'Tabletop',
+        'Kids', 'Art', 'Clearance',
+      ],
+      navHighlight: null,
+      theme: {
+        fontHeading: "'Libre Baskerville', 'Georgia', serif",
+        fontBody: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+        colorBg: '#ffffff',
+        colorBgAlt: '#f8f7f4',
+        colorText: '#2c3a48',
+        colorTextSecondary: '#7a8a98',
+        colorAccent: '#7a8ba0',
+        colorAccentHover: '#5e7088',
+        colorBorder: '#e5e7eb',
+        colorSuccess: '#6a8a77',
+        colorAnnouncementBg: '#7a8ba0',
+        colorAnnouncementText: '#ffffff',
+        colorHeaderBg: '#ffffff',
+        colorHeaderBorder: '#e5e7eb',
+        headerStickyOffset: '188px',
       },
     };
   }
