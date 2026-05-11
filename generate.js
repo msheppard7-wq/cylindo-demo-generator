@@ -241,9 +241,11 @@ function brandPresetForName(brandName) {
     return {
       logoText: 'Maine Cottage',
       headerVariant: 'maine-cottage',
+      tagline: 'Colorful Living Room Furniture',
       announcementText: 'Join the Cottage Crew for 3 FREE Swatches!',
       announcementCtaText: '',
       searchPlaceholder: 'Search',
+      footerCopyright: 'Maine Cottage — Cylindo Demo',
       utilityLinksLeft: [],
       utilityLinksRight: [],
       navLinks: [
