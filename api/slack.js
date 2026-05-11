@@ -439,6 +439,36 @@ async function scrapeTheme(url) {
   }
 }
 
+// ---- Slack File Download ----
+
+async function downloadSlackFile(urlPrivate) {
+  return new Promise((resolve, reject) => {
+    function doFetch(url) {
+      const parsed = new URL(url);
+      const opts = {
+        hostname: parsed.hostname,
+        path: parsed.pathname + parsed.search,
+        headers: { Authorization: `Bearer ${SLACK_BOT_TOKEN}` },
+      };
+      https.get(opts, (res) => {
+        if ((res.statusCode === 301 || res.statusCode === 302) && res.headers.location) {
+          return doFetch(res.headers.location);
+        }
+        if (res.statusCode !== 200) return reject(new Error(`Slack file download HTTP ${res.statusCode}`));
+        const chunks = [];
+        res.on('data', (chunk) => chunks.push(chunk));
+        res.on('end', () => resolve(Buffer.concat(chunks)));
+      }).on('error', reject);
+    }
+    doFetch(urlPrivate);
+  });
+}
+
+function logoExtFromMimetype(mimetype) {
+  const map = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/gif': 'gif', 'image/webp': 'webp', 'image/svg+xml': 'svg' };
+  return map[mimetype] || 'png';
+}
+
 // ---- Slack API ----
 
 async function slackAPI(method, body) {
@@ -635,14 +665,15 @@ async function openModal(triggerId, channelId) {
       },
       {
         type: 'input',
-        block_id: 'screenshot_url',
-        label: { type: 'plain_text', text: 'Reference Screenshot URL (optional)' },
-        hint: { type: 'plain_text', text: 'Public image URL of the target site\'s header (Imgur, public CDN, or Slack "Create public link"). Shown in the tracker for side-by-side comparison. Note: files.slack.com URLs require auth and will be skipped.' },
+        block_id: 'logo_upload',
+        label: { type: 'plain_text', text: 'Brand Logo / Header Image (optional)' },
+        hint: { type: 'plain_text', text: 'Upload the company logo or header screenshot. This image will be used on the demo page as the brand logo.' },
         optional: true,
         element: {
-          type: 'url_text_input',
+          type: 'file_input',
           action_id: 'value',
-          placeholder: { type: 'plain_text', text: 'https://i.imgur.com/example.png' },
+          filetypes: ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'],
+          max_files: 1,
         },
       },
       {
@@ -680,6 +711,7 @@ async function openModal(triggerId, channelId) {
             { text: { type: 'plain_text', text: 'Lightology' },                    value: 'lightology' },
             { text: { type: 'plain_text', text: 'Quince Minimal' },                value: 'quince-minimal' },
             { text: { type: 'plain_text', text: 'Serena & Lily' },                 value: 'serena-lily' },
+            { text: { type: 'plain_text', text: 'Maine Cottage' },                value: 'maine-cottage' },
           ],
         },
       },
@@ -818,6 +850,41 @@ function brandPresetForName(brandName) {
         colorHeaderBg: '#ffffff',
         colorHeaderBorder: '#e5e7eb',
         headerStickyOffset: '188px',
+      },
+    };
+  }
+  if (n.includes('maine') && n.includes('cottage')) {
+    return {
+      logoText: 'Maine Cottage',
+      logoImageUrl: '',
+      swatchShape: 'square',
+      headerVariant: 'maine-cottage',
+      announcementText: 'Join the Cottage Crew for 3 FREE Swatches!',
+      announcementCtaText: '',
+      searchPlaceholder: 'Search',
+      utilityLinksLeft: [],
+      utilityLinksRight: [],
+      navLinks: [
+        'New', 'Furniture', 'Rugs', 'Lighting', 'Art', 'Decor', 'Fabric', 'Samples',
+        'Shop the Room', 'Shop by Color', 'Sale',
+      ],
+      navHighlight: 'Sale',
+      theme: {
+        fontHeading: "'Libre Baskerville', 'Georgia', serif",
+        fontBody: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+        colorBg: '#ffffff',
+        colorBgAlt: '#f8f8f8',
+        colorText: '#2f3f50',
+        colorTextSecondary: '#6f7d8a',
+        colorAccent: '#6d86a1',
+        colorAccentHover: '#5a738d',
+        colorBorder: '#e6e9ee',
+        colorSuccess: '#5a7c65',
+        colorAnnouncementBg: '#7f9fc5',
+        colorAnnouncementText: '#ffffff',
+        colorHeaderBg: '#ffffff',
+        colorHeaderBorder: '#eef1f4',
+        headerStickyOffset: '92px',
       },
     };
   }
@@ -1006,7 +1073,7 @@ async function deployToVercel(projectName, files) {
     headers: { Authorization: `Bearer ${VERCEL_TOKEN}`, 'Content-Type': 'application/json' },
   }, JSON.stringify({
     name: projectName,
-    files: files.map((f) => ({ file: f.path, data: Buffer.from(f.content).toString('base64'), encoding: 'base64' })),
+    files: files.map((f) => ({ file: f.path, data: f.encoding === 'base64' ? f.content : Buffer.from(f.content).toString('base64'), encoding: 'base64' })),
     projectSettings: { framework: null },
     target: 'production',
   }));
@@ -1029,7 +1096,7 @@ async function deployToVercel(projectName, files) {
 
 // ---- Core Generation Logic ----
 
-async function generateDemo({ customerId, productCodes, curatorCode, brandName, brandUrl, swatchShape, headerVariant, onStatusUpdate }) {
+async function generateDemo({ customerId, productCodes, curatorCode, brandName, brandUrl, swatchShape, headerVariant, logoFile, onStatusUpdate }) {
   log('gen', 'Starting for', brandName, '| products:', productCodes.join(', '), '| swatch:', swatchShape || 'auto', '| header:', headerVariant || 'auto');
   const products = [];
   const statusParts = [];
@@ -1095,6 +1162,45 @@ async function generateDemo({ customerId, productCodes, curatorCode, brandName, 
     log('gen', 'Injected Google Fonts link:', scraped.googleFontsUrl.substring(0, 80));
   }
 
+  // Download uploaded logo from Slack and inject into deployment
+  if (logoFile) {
+    try {
+      log('gen', 'Downloading logo from Slack:', logoFile.name);
+      const logoBuffer = await withTimeout(downloadSlackFile(logoFile.url_private), 10000);
+      const ext = logoExtFromMimetype(logoFile.mimetype);
+      const logoFilename = `logo.${ext}`;
+      config.brand.logoImageUrl = logoFilename;
+      config.brand.logoText = ''; // suppress text logo when image is present
+      log('gen', `Logo downloaded: ${logoBuffer.length} bytes → ${logoFilename}`);
+
+      const slug = slugify(brandName);
+      const projectName = `cylindo-demo-${slug}`;
+      const files = [
+        { path: 'index.html', content: indexHTML },
+        { path: 'styles.css', content: stylesCSS },
+        { path: 'app.js', content: appJS },
+        { path: 'config.json', content: JSON.stringify(config, null, 2) },
+        { path: logoFilename, content: logoBuffer.toString('base64'), encoding: 'base64' },
+      ];
+
+      log('gen', 'Deploying to Vercel as', projectName, '| files:', files.length, '(with logo)');
+      const deployment = await deployToVercel(projectName, files);
+      log('gen', 'Vercel response:', deployment.status, JSON.stringify(deployment.data).substring(0, 500));
+
+      if (deployment.status !== 200 && deployment.status !== 201) {
+        const errMsg = deployment.data?.error?.message || deployment.data?.error?.code || JSON.stringify(deployment.data);
+        throw new Error(`Vercel deployment failed (HTTP ${deployment.status}): ${errMsg}`);
+      }
+
+      let demoUrl = `https://${projectName}.vercel.app`;
+      if (deployment.data.url) demoUrl = `https://${deployment.data.url}`;
+      log('gen', 'Demo URL:', demoUrl);
+      return { demoUrl, statusParts, projectName };
+    } catch (logoErr) {
+      log('gen', 'Logo download failed, continuing without it:', logoErr.message);
+    }
+  }
+
   const slug = slugify(brandName);
   const projectName = `cylindo-demo-${slug}`;
   const files = [
@@ -1122,9 +1228,9 @@ async function generateDemo({ customerId, productCodes, curatorCode, brandName, 
 
 // ---- Generation with Status Tracker ----
 
-async function runGenerationWithTracker({ customerId, productCodes, curatorCode, brandName, brandUrl, userId, channelId, screenshotUrl, swatchShape, headerVariant }) {
+async function runGenerationWithTracker({ customerId, productCodes, curatorCode, brandName, brandUrl, userId, channelId, logoFile, swatchShape, headerVariant }) {
   const channel = channelId || DEMO_CHANNEL;
-  const trackerParams = { brandName, customerId, curatorCode, productCodes, brandUrl, userId, screenshotUrl };
+  const trackerParams = { brandName, customerId, curatorCode, productCodes, brandUrl, userId, screenshotUrl: null };
 
   // 1. Post initial "Submitted" message
   let messageTs = null;
@@ -1165,7 +1271,7 @@ async function runGenerationWithTracker({ customerId, productCodes, curatorCode,
         await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
       }
 
-      const result = await generateDemo({ customerId, productCodes, curatorCode, brandName, brandUrl, swatchShape, headerVariant, onStatusUpdate });
+      const result = await generateDemo({ customerId, productCodes, curatorCode, brandName, brandUrl, swatchShape, headerVariant, logoFile, onStatusUpdate });
 
       // Success — update tracker to "Created"
       await slackUpdateMessage(channel, messageTs, `Demo ready: ${brandName}`,
@@ -1307,7 +1413,8 @@ const slackFetchHandler = {
         const brandUrl = values.brand_url?.value?.value?.trim() || '';
 
         // Optional brand-matching overrides (static_select uses .selected_option.value, not .value.value)
-        const screenshotUrl = values.screenshot_url?.value?.value?.trim() || '';
+        const uploadedFiles = values.logo_upload?.value?.files || [];
+        const logoFile      = uploadedFiles[0] || null;
         const swatchShape   = values.swatch_shape?.value?.selected_option?.value || 'auto';
         const headerVariant = values.header_variant?.value?.selected_option?.value || 'auto';
 
@@ -1319,12 +1426,12 @@ const slackFetchHandler = {
 
         const productCodes = productCodesRaw.split(',').map((p) => p.trim()).filter(Boolean);
 
-        log('submit', 'Modal submitted by', payload.user?.name, '| brand:', brandName, '| products:', productCodes.join(', '), '| swatch:', swatchShape, '| header:', headerVariant, '| screenshot:', screenshotUrl ? 'yes' : 'no');
+        log('submit', 'Modal submitted by', payload.user?.name, '| brand:', brandName, '| products:', productCodes.join(', '), '| swatch:', swatchShape, '| header:', headerVariant, '| logo:', logoFile ? logoFile.name : 'none');
 
         waitUntil(
           runGenerationWithTracker({
             customerId, productCodes, curatorCode, brandName, brandUrl, userId, channelId,
-            screenshotUrl, swatchShape, headerVariant,
+            logoFile, swatchShape, headerVariant,
           }).catch((err) => {
             log('waitUntil', 'runGenerationWithTracker rejected:', err.message, err.stack);
           })

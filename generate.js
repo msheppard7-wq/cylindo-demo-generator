@@ -237,6 +237,39 @@ function brandPresetForName(brandName) {
       }
     };
   }
+  if (n.includes('maine') && n.includes('cottage')) {
+    return {
+      logoText: 'Maine Cottage',
+      headerVariant: 'maine-cottage',
+      announcementText: 'Join the Cottage Crew for 3 FREE Swatches!',
+      announcementCtaText: '',
+      searchPlaceholder: 'Search',
+      utilityLinksLeft: [],
+      utilityLinksRight: [],
+      navLinks: [
+        'New', 'Furniture', 'Rugs', 'Lighting', 'Art', 'Decor', 'Fabric', 'Samples',
+        'Shop the Room', 'Shop by Color', 'Sale'
+      ],
+      navHighlight: 'Sale',
+      theme: {
+        fontHeading: "'Libre Baskerville', 'Georgia', serif",
+        fontBody: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
+        colorBg: '#ffffff',
+        colorBgAlt: '#f8f8f8',
+        colorText: '#2f3f50',
+        colorTextSecondary: '#6f7d8a',
+        colorAccent: '#6d86a1',
+        colorAccentHover: '#5a738d',
+        colorBorder: '#e6e9ee',
+        colorSuccess: '#5a7c65',
+        colorAnnouncementBg: '#7f9fc5',
+        colorAnnouncementText: '#ffffff',
+        colorHeaderBg: '#ffffff',
+        colorHeaderBorder: '#eef1f4',
+        headerStickyOffset: '92px'
+      }
+    };
+  }
   if (!n.includes('haverty')) return null;
   return {
     logoText: 'HAVERTYS',
